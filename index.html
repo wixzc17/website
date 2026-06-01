@@ -52,51 +52,57 @@
             display: flex;
             width: 100%;
             border-radius: 24px;
-            border: 1px solid #333333;
-            padding: 0 8px;
-            background: #111111;
-            box-shadow: 0 1px 3px rgba(255,255,255,0.1);
-            transition: all 0.218s ease;
+            border: 1px solid #404040;
+            padding: 0;
+            background: #000000;
+            box-shadow: 0 2px 8px rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
         }
 
         .search-form:hover {
-            box-shadow: 0 1px 5px rgba(255,255,255,0.15);
+            box-shadow: 0 4px 12px rgba(255,255,255,0.15);
+            border-color: #505050;
         }
 
         .search-input {
             flex: 1;
             border: none;
             outline: none;
-            padding: 12px 16px;
+            padding: 14px 20px;
             font-size: 16px;
             background: transparent;
             color: #ffffff;
         }
 
         .search-input::placeholder {
-            color: #888888;
+            color: #666666;
         }
 
         .search-button {
-            background: #222222;
+            background: none;
             border: none;
-            padding: 0 16px;
+            padding: 0;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background-color 0.218s;
+            transition: background-color 0.2s;
+            position: relative;
         }
 
         .search-button:hover {
-            background: #333333;
+            background: rgba(255,255,255,0.1);
         }
 
         .search-icon {
-            width: 24px;
-            height: 24px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23ffffff" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>') no-repeat center;
-            background-size: contain;
+            width: 20px;
+            height: 20px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .search-button:hover .search-icon {
+            opacity: 1;
         }
 
         .footer {
@@ -133,30 +139,29 @@
 
             .search-form {
                 border-radius: 50px;
-                padding: 0 4px;
+                padding: 0;
             }
 
             .search-input {
                 font-size: 18px;
-                padding: 16px 20px;
+                padding: 16px 24px;
             }
 
             .search-input::placeholder {
-                color: #888888;
+                color: #666666;
             }
 
             .search-button {
-                padding: 0 12px;
-                background: #222222;
+                padding: 0;
             }
 
             .search-button:hover {
-                background: #333333;
+                background: rgba(255,255,255,0.1);
             }
 
             .search-icon {
-                width: 20px;
-                height: 20px;
+                width: 18px;
+                height: 18px;
             }
 
             .footer {

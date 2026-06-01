@@ -5,6 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>momo</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-family='Segoe Script' font-size='45' font-style='italic' font-weight='300' text-anchor='middle' fill='%23ffffff'>mo</text></svg>">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('.search-input');
+            const searchForm = document.querySelector('.search-form');
+            let suggestions = null;
+
+            // 模拟搜索建议数据
+            const mockSuggestions = [
+                'momo官网',
+                'momo下载',
+                'momo应用',
+                'momo聊天',
+                'momo社交',
+                'momo游戏',
+                'momo软件',
+                'momo手机'
+            ];
+
+            searchInput.addEventListener('input', function(e) {
+                const value = e.target.value.trim();
+
+                if (value.length > 0) {
+                    showSuggestions(value);
+                } else {
+                    hideSuggestions();
+                }
+            });
+
+            searchInput.addEventListener('blur', function() {
+                setTimeout(() => hideSuggestions(), 200);
+            });
+
+            function showSuggestions(query) {
+                hideSuggestions();
+
+                const filtered = mockSuggestions.filter(item =>
+                    item.toLowerCase().includes(query.toLowerCase())
+                );
+
+                if (filtered.length > 0) {
+                    suggestions = document.createElement('div');
+                    suggestions.className = 'suggestions';
+
+                    filtered.slice(0, 5).forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = item;
+                        div.addEventListener('click', function() {
+                            searchInput.value = item;
+                            hideSuggestions();
+                            searchForm.submit();
+                        });
+                        suggestions.appendChild(div);
+                    });
+
+                    searchForm.style.position = 'relative';
+                    searchForm.appendChild(suggestions);
+                }
+            }
+
+            function hideSuggestions() {
+                if (suggestions) {
+                    suggestions.remove();
+                    suggestions = null;
+                }
+            }
+        });
+    </script>
     <style>
         * {
             margin: 0;
@@ -92,7 +160,31 @@
 
         .search-input:focus {
             outline: none;
-            box-shadow: inset 0 0 0 2px #ffffff;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 12px;
+            margin-top: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        .suggestion-item {
+            padding: 12px 20px;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+
+        .suggestion-item:hover {
+            background: #2a2a2a;
         }
 
         .footer {

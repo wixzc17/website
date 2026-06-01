@@ -13,13 +13,13 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            background: #000000;
             font-family: Arial, sans-serif;
         }
 
         .copyright {
             font-size: 14px;
-            color: #5f6368;
+            color: #888888;
             font-style: italic;
             font-weight: bold;
             text-align: center;
@@ -67,15 +67,23 @@
             .search-form {
                 border-radius: 50px;
                 padding: 0 4px;
+                background: #111111;
+                border: 1px solid #333333;
             }
 
             .search-input {
                 font-size: 18px;
                 padding: 16px 20px;
+                color: #ffffff;
             }
 
             .search-button {
                 padding: 0 12px;
+                background: #222222;
+            }
+
+            .search-button:hover {
+                background: #333333;
             }
 
             .search-icon {
@@ -96,14 +104,15 @@
             display: flex;
             width: 100%;
             border-radius: 24px;
-            border: 1px solid #dfe1e5;
+            border: 1px solid #333333;
             padding: 0 8px;
-            box-shadow: 0 1px 6px rgba(32,33,36,.28);
+            background: #111111;
+            box-shadow: 0 1px 6px rgba(255,255,255,.1);
             transition: box-shadow 0.218s;
         }
 
         .search-form:hover {
-            box-shadow: 0 1px 6px rgba(32,33,36,.32);
+            box-shadow: 0 1px 6px rgba(255,255,255,.2);
         }
 
         .search-input {
@@ -113,10 +122,11 @@
             padding: 12px 16px;
             font-size: 16px;
             background: transparent;
+            color: #ffffff;
         }
 
         .search-button {
-            background: #f8f9fa;
+            background: #222222;
             border: none;
             padding: 0 16px;
             cursor: pointer;
@@ -127,13 +137,13 @@
         }
 
         .search-button:hover {
-            background: #f0f0f0;
+            background: #333333;
         }
 
         .search-icon {
             width: 24px;
             height: 24px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23333" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>') no-repeat center;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23ffffff" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>') no-repeat center;
             background-size: contain;
         }
 

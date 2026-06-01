@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>momo</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -15,78 +19,13 @@
             font-family: Arial, sans-serif;
         }
 
-        .copyright {
-            font-size: 14px;
-            color: #5f6368;
-            font-style: italic;
-            font-weight: bold;
-            text-align: center;
-            line-height: 1.5;
-            margin-top: auto;
-            padding-bottom: 20px;
-        }
-
-        /* 手机端适配 */
-        @media (max-width: 768px) {
-            body {
-                padding: 0;
-            }
-
-            .copyright {
-                font-size: 12px;
-                padding: 0 20px;
-                line-height: 1.4;
-                padding-bottom: 15px;
-            }
-
-            .momo-logo {
-                font-size: 54px;
-                margin-bottom: 20px;
-                font-family: 'Segoe Script', cursive;
-            }
-
-            .search-container {
-                width: 90%;
-                max-width: none;
-            }
-
-            .search-form {
-                border-radius: 50px;
-                padding: 0 4px;
-                background: #ffffff;
-                border: 1px solid #e0e0e0;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }
-
-            .search-input {
-                font-size: 18px;
-                padding: 16px 20px;
-                color: #202124;
-            }
-
-            .search-button {
-                padding: 0 12px;
-                background: transparent;
-            }
-
-            .search-button:hover {
-                background: rgba(0,0,0,0.05);
-            }
-
-            .search-icon {
-                width: 20px;
-                height: 20px;
-                background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%239e9e9e" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>') no-repeat center;
-                background-size: contain;
-            }
-        }
-
-        .search-container {
-            width: 100%;
-            max-width: 584px;
+        .main-content {
+            flex: 1;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
+            padding: 20px;
         }
 
         .momo-logo {
@@ -98,6 +37,14 @@
             font-family: 'Segoe Script', cursive;
             letter-spacing: 3px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .search-container {
+            width: 100%;
+            max-width: 584px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .search-form {
@@ -147,21 +94,85 @@
             background-size: contain;
         }
 
-            </style>
+        .footer {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .copyright {
+            font-size: 14px;
+            color: #5f6368;
+            font-style: italic;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        .copyright-en {
+            margin-bottom: 5px;
+        }
+
+        .copyright-zh {
+            margin-bottom: 5px;
+        }
+
+        /* 手机端适配 */
+        @media (max-width: 768px) {
+            .momo-logo {
+                font-size: 54px;
+                margin-bottom: 20px;
+            }
+
+            .search-container {
+                width: 90%;
+            }
+
+            .search-form {
+                border-radius: 50px;
+                padding: 0 4px;
+            }
+
+            .search-input {
+                font-size: 18px;
+                padding: 16px 20px;
+            }
+
+            .search-button {
+                padding: 0 12px;
+            }
+
+            .search-icon {
+                width: 20px;
+                height: 20px;
+            }
+
+            .footer {
+                padding: 15px 20px;
+            }
+
+            .copyright {
+                font-size: 12px;
+                line-height: 1.4;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="copyright copyright-en">Copyright © 2026 Ren Jifeng & Wang Ziwen All Right Reserved</div>
-    <div class="copyright copyright-zh">版权所有 © 2026 任继锋 & 汪子雯 保留所有权利。</div>
+    <div class="main-content">
+        <div class="momo-logo">momo</div>
 
-    <div class="momo-logo">momo</div>
+        <div class="search-container">
+            <form class="search-form" action="https://www.google.com/search" method="GET">
+                <input type="text" class="search-input" name="q" placeholder="搜索" autocomplete="off">
+                <button type="submit" class="search-button">
+                    <div class="search-icon"></div>
+                </button>
+            </form>
+        </div>
+    </div>
 
-    <div class="search-container">
-        <form class="search-form" action="https://www.google.com/search" method="GET">
-            <input type="text" class="search-input" name="q" placeholder="搜索" autocomplete="off">
-            <button type="submit" class="search-button">
-                <div class="search-icon"></div>
-            </button>
-        </form>
+    <div class="footer">
+        <div class="copyright copyright-en">Copyright © 2026 Ren Jifeng & Wang Ziwen All Right Reserved</div>
+        <div class="copyright copyright-zh">版权所有 © 2026 任继锋 & 汪子雯 保留所有权利。</div>
     </div>
 </body>
 </html>

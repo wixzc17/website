@@ -40,6 +40,15 @@
             text-shadow: 1px 1px 2px rgba(255,255,255,0.2);
         }
 
+        .version {
+            font-size: 14px;
+            color: #666666;
+            font-weight: 300;
+            letter-spacing: 1px;
+            margin-left: 8px;
+            vertical-align: super;
+        }
+
         .search-container {
             width: 100%;
             max-width: 584px;
@@ -123,6 +132,11 @@
                 margin-bottom: 20px;
             }
 
+            .version {
+                font-size: 12px;
+                margin-left: 6px;
+            }
+
             .search-container {
                 width: 90%;
             }
@@ -160,7 +174,7 @@
 </head>
 <body>
     <div class="main-content">
-        <div class="momo-logo">momo</div>
+        <div class="momo-logo">momo<span class="version">v0.0.1</span></div>
 
         <div class="search-container">
             <form class="search-form" action="https://www.google.com/search" method="GET">

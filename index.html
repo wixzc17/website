@@ -8,11 +8,9 @@
         body {
             margin: 0;
             padding: 0;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
             background: #ffffff;
             font-family: Arial, sans-serif;
         }
@@ -26,32 +24,22 @@
             line-height: 1.5;
         }
 
-        .copyright-en {
-            margin-bottom: 5px;
-        }
-
-        .copyright-zh {
-            margin-bottom: 5px;
+        .copyright {
+            margin-top: auto;
+            padding-bottom: 20px;
         }
 
         /* 手机端适配 */
         @media (max-width: 768px) {
             body {
-                padding: 20px 0;
+                padding: 0;
             }
 
             .copyright {
                 font-size: 12px;
                 padding: 0 20px;
                 line-height: 1.4;
-            }
-
-            .copyright-en {
-                margin-bottom: 5px;
-            }
-
-            .copyright-zh {
-                margin-bottom: 5px;
+                padding-bottom: 15px;
             }
 
             .momo-logo {

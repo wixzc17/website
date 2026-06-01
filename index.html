@@ -38,15 +38,18 @@
             font-family: 'Segoe Script', cursive;
             letter-spacing: 3px;
             text-shadow: 1px 1px 2px rgba(255,255,255,0.2);
+            position: relative;
+            display: inline-block;
         }
 
         .version {
             font-size: 14px;
-            color: #666666;
+            color: #ffffff;
             font-weight: 300;
             letter-spacing: 1px;
-            margin-left: 8px;
-            vertical-align: super;
+            position: absolute;
+            bottom: -10px;
+            right: -35px;
         }
 
         .search-container {
@@ -87,15 +90,9 @@
             color: #666666;
         }
 
-        .search-form input[type="text"]::-webkit-search-decoration,
-        .search-form input[type="text"]::-webkit-search-cancel-button,
-        .search-form input[type="text"]::-webkit-search-results-button,
-        .search-form input[type="text"]::-webkit-search-results-decoration {
-            -webkit-appearance: none;
-        }
-
         .search-input:focus {
             outline: none;
+            box-shadow: inset 0 0 0 2px #ffffff;
         }
 
         .footer {
@@ -130,11 +127,16 @@
             .momo-logo {
                 font-size: 54px;
                 margin-bottom: 20px;
+                position: relative;
+                display: inline-block;
             }
 
             .version {
                 font-size: 12px;
-                margin-left: 6px;
+                color: #ffffff;
+                position: absolute;
+                bottom: -8px;
+                right: -25px;
             }
 
             .search-container {

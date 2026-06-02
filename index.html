@@ -33,6 +33,12 @@
                 }
             });
 
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    hideSuggestions();
+                }
+            });
+
             searchInput.addEventListener('blur', function() {
                 setTimeout(() => hideSuggestions(), 200);
             });
@@ -48,14 +54,23 @@
                     suggestions = document.createElement('div');
                     suggestions.className = 'suggestions';
 
+                    // 确保只显示5个，最多
                     filtered.slice(0, 5).forEach(item => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
                         div.textContent = item;
                         div.addEventListener('click', function() {
-                            searchInput.value = item;
-                            hideSuggestions();
-                            searchForm.submit();
+                            const oldValue = searchInput.value;
+                            searchInput.style.transition = 'opacity 0.3s ease';
+                            searchInput.style.opacity = '0';
+
+                            setTimeout(() => {
+                                searchInput.value = item;
+                                searchInput.style.transition = 'opacity 0.3s ease';
+                                searchInput.style.opacity = '1';
+                                hideSuggestions();
+                                searchForm.submit();
+                            }, 300);
                         });
                         suggestions.appendChild(div);
                     });
@@ -167,24 +182,35 @@
             top: 100%;
             left: 0;
             right: 0;
-            background: #1a1a1a;
+            background: #000000;
             border: 1px solid #333333;
-            border-radius: 12px;
-            margin-top: 4px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border-radius: 8px;
+            margin-top: 2px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             z-index: 1000;
+            max-height: 300px;
+            overflow: hidden;
         }
 
         .suggestion-item {
-            padding: 12px 20px;
+            padding: 10px 20px;
             color: #ffffff;
             cursor: pointer;
-            transition: background 0.2s;
             font-size: 14px;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: clip;
         }
 
-        .suggestion-item:hover {
-            background: #2a2a2a;
+        .suggestion-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            right: 20px;
+            height: 1px;
+            background: #ffffff;
         }
 
         .footer {

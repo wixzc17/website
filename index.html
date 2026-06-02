@@ -13,21 +13,11 @@
 
             // 模拟搜索建议数据
             const mockSuggestions = [
-                '搜索',
-                '新闻',
-                '音乐',
-                '视频',
-                '图片',
-                '地图',
-                '翻译',
-                '计算器',
-                '天气预报',
-                '股票',
-                '游戏',
-                '小说',
-                '美食',
-                '旅游',
-                '健康'
+                '搜索', '新闻', '音乐', '视频', '图片', '地图', '翻译', '计算器', '天气预报', '股票',
+                '游戏', '小说', '美食', '旅游', '健康', '教育', '科技', '体育', '财经', '娱乐',
+                '汽车', '房产', '时尚', '母婴', '宠物', '动漫', '综艺', '纪录片', '电视剧', '电影',
+                '直播', '购物', '外卖', '酒店', '机票', '火车票', '理财产品', '贷款', '信用卡', '保险',
+                '求职', '租房', '二手房', '装修', '家具', '数码', '手机', '电脑', '相机', '家电'
             ];
 
             searchInput.addEventListener('input', function(e) {
@@ -53,29 +43,45 @@
             function showSuggestions(query) {
                 hideSuggestions();
 
-                // 查找匹配的建议，优先显示完全匹配的
-                const suggestionsArray = [];
-
-                // 添加完全匹配的建议
-                mockSuggestions.forEach(item => {
-                    if (item.includes(query)) {
-                        suggestionsArray.push(item);
-                    }
-                });
-
-                // 如果没有完全匹配的，添加包含查询词的建议
-                mockSuggestions.forEach(item => {
-                    if (item.includes(query) && !suggestionsArray.includes(item)) {
-                        suggestionsArray.push(item);
-                    }
-                });
+                // 简化逻辑：只要建议包含查询词就显示
+                const suggestionsArray = mockSuggestions.filter(item =>
+                    item.toLowerCase().includes(query.toLowerCase())
+                );
 
                 if (suggestionsArray.length > 0) {
                     suggestions = document.createElement('div');
                     suggestions.className = 'suggestions';
 
-                    // 最多显示5个
+                    // 最多显示5个，按添加顺序
                     suggestionsArray.slice(0, 5).forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = item;
+                        div.addEventListener('click', function() {
+                            const oldValue = searchInput.value;
+                            searchInput.style.transition = 'opacity 0.3s ease';
+                            searchInput.style.opacity = '0';
+
+                            setTimeout(() => {
+                                searchInput.value = item;
+                                searchInput.style.transition = 'opacity 0.3s ease';
+                                searchInput.style.opacity = '1';
+                                hideSuggestions();
+                            }, 300);
+                        });
+                        suggestions.appendChild(div);
+                    });
+
+                    searchForm.style.position = 'relative';
+                    searchForm.appendChild(suggestions);
+                } else {
+                    // 如果没有匹配的建议，显示一些通用建议
+                    const generalSuggestions = ['搜索更多', '试试其他关键词', '换一个搜索词'];
+
+                    suggestions = document.createElement('div');
+                    suggestions.className = 'suggestions';
+
+                    generalSuggestions.slice(0, 5).forEach(item => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
                         div.textContent = item;

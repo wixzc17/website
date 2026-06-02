@@ -13,14 +13,21 @@
 
             // 模拟搜索建议数据
             const mockSuggestions = [
-                'momo官网',
-                'momo下载',
-                'momo应用',
-                'momo聊天',
-                'momo社交',
-                'momo游戏',
-                'momo软件',
-                'momo手机'
+                '搜索',
+                '新闻',
+                '音乐',
+                '视频',
+                '图片',
+                '地图',
+                '翻译',
+                '计算器',
+                '天气预报',
+                '股票',
+                '游戏',
+                '小说',
+                '美食',
+                '旅游',
+                '健康'
             ];
 
             searchInput.addEventListener('input', function(e) {
@@ -46,16 +53,29 @@
             function showSuggestions(query) {
                 hideSuggestions();
 
-                const filtered = mockSuggestions.filter(item =>
-                    item.toLowerCase().includes(query.toLowerCase())
-                );
+                // 查找匹配的建议，优先显示完全匹配的
+                const suggestionsArray = [];
 
-                if (filtered.length > 0) {
+                // 添加完全匹配的建议
+                mockSuggestions.forEach(item => {
+                    if (item.includes(query)) {
+                        suggestionsArray.push(item);
+                    }
+                });
+
+                // 如果没有完全匹配的，添加包含查询词的建议
+                mockSuggestions.forEach(item => {
+                    if (item.includes(query) && !suggestionsArray.includes(item)) {
+                        suggestionsArray.push(item);
+                    }
+                });
+
+                if (suggestionsArray.length > 0) {
                     suggestions = document.createElement('div');
                     suggestions.className = 'suggestions';
 
-                    // 确保只显示5个，最多
-                    filtered.slice(0, 5).forEach(item => {
+                    // 最多显示5个
+                    suggestionsArray.slice(0, 5).forEach(item => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
                         div.textContent = item;
@@ -69,7 +89,6 @@
                                 searchInput.style.transition = 'opacity 0.3s ease';
                                 searchInput.style.opacity = '1';
                                 hideSuggestions();
-                                searchForm.submit();
                             }, 300);
                         });
                         suggestions.appendChild(div);

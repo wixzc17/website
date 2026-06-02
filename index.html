@@ -17,8 +17,51 @@
                 '游戏', '小说', '美食', '旅游', '健康', '教育', '科技', '体育', '财经', '娱乐',
                 '汽车', '房产', '时尚', '母婴', '宠物', '动漫', '综艺', '纪录片', '电视剧', '电影',
                 '直播', '购物', '外卖', '酒店', '机票', '火车票', '理财产品', '贷款', '信用卡', '保险',
-                '求职', '租房', '二手房', '装修', '家具', '数码', '手机', '电脑', '相机', '家电'
+                '求职', '租房', '二手房', '装修', '家具', '数码', '手机', '电脑', '相机', '家电',
+                '今日新闻', '最新音乐', '热门视频', '搞笑图片', '导航地图', '在线翻译',
+                '天气查询', '股市行情', '手机游戏', '网络小说', '美食教程', '旅游攻略',
+                '健康养生', '在线教育', '科技资讯', '体育直播', '财经新闻', '综艺节目',
+                '汽车评测', '房产信息', '时尚潮流', '母婴用品', '宠物医院', '动漫新作',
+                '电视剧全集', '电影推荐', '直播平台', '网上购物', '外卖订餐', '酒店预订',
+                '机票查询', '火车时刻', '理财产品', '贷款申请', '信用卡办理', '保险推荐',
+                '找工作', '租房信息', '二手房买卖', '装修设计', '家具城', '数码产品',
+                '智能手机', '笔记本电脑', '相机镜头', '家用电器'
             ];
+
+            // 智能联想映射
+            const联想映射 = {
+                '音': ['音乐', '音频', '音响', '音效', '音乐播放器'],
+                '乐': ['音乐', '乐器', '乐谱', '音乐会'],
+                '视': ['视频', '视线', '视野', '视力'],
+                '频': ['频率', '频段', '频道', '视频'],
+                '图': ['图片', '图书', '图形', '图案'],
+                '片': ['图片', '影片', '片段', '照片'],
+                '游': ['游戏', '游泳', '游览', '游客'],
+                '戏': ['游戏', '戏剧', '戏曲', '戏院'],
+                '新': ['新闻', '新浪', '新鲜', '新区'],
+                '闻': ['新闻', '闻名', '传闻', '嗅觉'],
+                '天': ['天气', '天空', '天下', '天然'],
+                '气': ['天气', '气体', '气质', '氧气'],
+                '股': ['股票', '股份', '股东', '股权'],
+                '票': ['股票', '门票', '车票', '彩票'],
+                '电': ['电影', '电脑', '电话', '电视'],
+                '影': ['电影', '影响', '影子', '摄影'],
+                '手': ['手机', '手表', '手术', '手工'],
+                '机': ['手机', '飞机', '机会', '机械'],
+                '脑': ['电脑', '头脑', '脑海', '电脑'],
+                '计': ['计算器', '计划', '计算机', '设计'],
+                '算': ['计算器', '算术', '算法', '计算'],
+                '器': ['计算器', '器具', '仪器', '容器'],
+                '翻': ['翻译', '翻开', '翻身', '翻新'],
+                '译': ['翻译', '译本', '译者', '译制'],
+                '导': ['导航', '导游', '导演', '指导'],
+                '航': ['导航', '航空', '航天', '航行'],
+                '预': ['预报', '预约', '预期', '预防'],
+                '报': ['天气预报', '报告', '报纸', '报警'],
+                '测': ['测试', '测量', '推测', '预测'],
+                '健': ['健康', '健身', '健美', '保健'],
+                '康': ['健康', '康复', '小康', '安康']
+            };
 
             searchInput.addEventListener('input', function(e) {
                 const value = e.target.value.trim();
@@ -43,45 +86,53 @@
             function showSuggestions(query) {
                 hideSuggestions();
 
-                // 简化逻辑：只要建议包含查询词就显示
-                const suggestionsArray = mockSuggestions.filter(item =>
-                    item.toLowerCase().includes(query.toLowerCase())
-                );
+                const suggestionsArray = new Set();
 
-                if (suggestionsArray.length > 0) {
-                    suggestions = document.createElement('div');
-                    suggestions.className = 'suggestions';
+                // 1. 直接包含搜索词的建议
+                mockSuggestions.forEach(item => {
+                    if (item.toLowerCase().includes(query.toLowerCase())) {
+                        suggestionsArray.add(item);
+                    }
+                });
 
-                    // 最多显示5个，按添加顺序
-                    suggestionsArray.slice(0, 5).forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = 'suggestion-item';
-                        div.textContent = item;
-                        div.addEventListener('click', function() {
-                            const oldValue = searchInput.value;
-                            searchInput.style.transition = 'opacity 0.3s ease';
-                            searchInput.style.opacity = '0';
-
-                            setTimeout(() => {
-                                searchInput.value = item;
-                                searchInput.style.transition = 'opacity 0.3s ease';
-                                searchInput.style.opacity = '1';
-                                hideSuggestions();
-                            }, 300);
+                // 2. 智能联想：搜索单个字时，显示相关词汇
+                if (query.length === 1) {
+                    const relatedWords = 联想映射[query];
+                    if (relatedWords) {
+                        relatedWords.forEach(word => {
+                            suggestionsArray.add(word);
                         });
-                        suggestions.appendChild(div);
-                    });
+                    }
+                }
 
-                    searchForm.style.position = 'relative';
-                    searchForm.appendChild(suggestions);
-                } else {
-                    // 如果没有匹配的建议，显示一些通用建议
-                    const generalSuggestions = ['搜索更多', '试试其他关键词', '换一个搜索词'];
+                // 3. 添加一些通用前缀建议
+                const prefixes = ['最新', '热门', '在线', '免费', '好玩的', '好看的'];
+                prefixes.forEach(prefix => {
+                    const suggestion = prefix + query;
+                    if (suggestion.length < 20 && suggestionsArray.size < 5) { // 限制长度和数量
+                        suggestionsArray.add(suggestion);
+                    }
+                });
 
+                // 4. 添加一些通用后缀建议
+                const suffixes = ['下载', '官网', 'app', '游戏', '视频', '图片', '音乐'];
+                suffixes.forEach(suffix => {
+                    if (query.length > 0 && suggestionsArray.size < 5) {
+                        const suggestion = query + suffix;
+                        if (suggestion.length < 20) {
+                            suggestionsArray.add(suggestion);
+                        }
+                    }
+                });
+
+                // 转换为数组并限制数量
+                const finalSuggestions = Array.from(suggestionsArray).slice(0, 5);
+
+                if (finalSuggestions.length > 0) {
                     suggestions = document.createElement('div');
                     suggestions.className = 'suggestions';
 
-                    generalSuggestions.slice(0, 5).forEach(item => {
+                    finalSuggestions.forEach(item => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
                         div.textContent = item;

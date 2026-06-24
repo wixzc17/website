@@ -35,12 +35,13 @@
 
                     return getFallbackSuggestions(query);
                 } catch (error) {
-                    console.log('获取百度建议失败，使用备用方�?);
+                    console.log('获取百度建议失败，使用备用方案');
                     return getFallbackSuggestions(query);
                 }
             }
 
-            // JSONP方式的百度建议（备用�?            function fetchBaiduJsonpSuggestions(query) {
+            // JSONP方式的百度建议（备用）
+            function fetchBaiduJsonpSuggestions(query) {
                 return new Promise((resolve) => {
                     const callbackName = 'callback_' + Math.random().toString(36).substr(2, 9);
                     const script = document.createElement('script');
@@ -67,7 +68,7 @@
 
                     document.head.appendChild(script);
 
-                    // 5秒超�?                    setTimeout(() => {
+                    // 5秒超时                    setTimeout(() => {
                         if (window[callbackName]) {
                             delete window[callbackName];
                             document.head.removeChild(script);
@@ -118,7 +119,7 @@
                         displaySuggestions(suggestionsData);
                     }
                 } catch (error) {
-                    console.error('显示建议时出�?', error);
+                    console.error('显示建议时出错', error);
                 }
             }
 
@@ -152,7 +153,7 @@
                 }
             }
 
-            // 智能建议生成器（使用百度API�?            function getSmartSuggestions(query) {
+            // 智能建议生成器（使用百度API            function getSmartSuggestions(query) {
                 return fetchBaiduSuggestions(query);
             }
 
@@ -164,29 +165,29 @@
             }
 
             // 天气小组件（右上角，内联 SVG 极简黑白风）
-            // 重要：中国大陆网�?+ file:// 打开是导致大多数用户看到 --° 的主要原�?            async function updateWeather() {
+            // 重要：中国大陆网络+ file:// 打开是导致大多数用户看到 --° 的主要原因            async function updateWeather() {
                 const iconEl = document.querySelector('.weather-icon');
                 const tempEl = document.querySelector('.weather-temp');
                 if (!iconEl || !tempEl) return;
 
-                // 检测是否直接用 file:// 打开（这种情况下浏览器会阻止所�?fetch�?                if (location.protocol === 'file:') {
+                // 检测是否直接用 file:// 打开（这种情况下浏览器会阻止所有 fetch                if (location.protocol === 'file:') {
                     tempEl.textContent = '--°';
                     iconEl.innerHTML = '';
                     const widget = document.querySelector('.weather-widget');
                     if (widget) {
-                        widget.title = '当前使用 file:// 直接打开，无法请求外�?API\n请用 Live Server �?npx serve 等方式通过 http:// 访问';
+                        widget.title = '当前使用 file:// 直接打开，无法请求外部 API\n请用 Live Server 或 npx serve 等方式通过 http:// 访问';
                     }
-                    console.error('[Weather] 你当前是通过 file:// 直接打开�?HTML 文件。\n\n' +
+                    console.error('[Weather] 你当前是通过 file:// 直接打开的 HTML 文件。\n\n' +
                         '正确打开方式：\n' +
                         '1. 用本地服务器运行（推荐）\n' +
                         '   - VS Code 安装 "Live Server" 扩展，右键文件点 "Open with Live Server"\n' +
-                        '   - 或者在命令行运行： npx serve .   �?python -m http.server 8000\n' +
+                        '   - 或者在命令行运行： npx serve .   ?python -m http.server 8000\n' +
                         '2. 然后通过 http://localhost:... 访问\n' +
-                        '3. file:// 模式下浏览器因安全策略禁止跨域请求外�?API');
+                        '3. file:// 模式下浏览器因安全策略禁止跨域请求外?API');
                     return;
                 }
 
-                // 带超时的 fetch�?秒）
+                // 带超时的 fetch（5秒）
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -227,7 +228,7 @@
                         widget.title = `获取失败: ${err.message}\n可能原因: 网络被墙 / 超时 / DNS / CORS`;
                     }
 
-                    // 其他可能原因�?                    // - 网络被墙 / DNS 失败 / 超时
+                    // 其他可能原因：                    // - 网络被墙 / DNS 失败 / 超时
                     // - 浏览器拦截了跨域
                     tempEl.textContent = '--°';
                     iconEl.innerHTML = '';
@@ -240,7 +241,7 @@
                 if (code === 0) {
                     return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><g stroke-linecap="round"><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.5" y1="4.5" x2="6.4" y2="6.4"/><line x1="17.6" y1="17.6" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.4" y2="17.6"/><line x1="17.6" y1="6.4" x2="19.5" y2="4.5"/></g></svg>`;
                 }
-                // 45,48 �?/ �?                if (code === 45 || code === 48) {
+                // 45,48 雾 / 霾                if (code === 45 || code === 48) {
                     return `<svg viewBox="0 0 24 24"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="13" x2="19" y2="13"/><line x1="5" y1="17" x2="19" y2="17"/></svg>`;
                 }
                 // 雨类（毛毛雨、中雨、大雨、暴雨、雷阵雨等）
@@ -251,10 +252,10 @@
                 if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
                     return `<svg viewBox="0 0 24 24"><path d="M7 15a4 4 0 0 1-4-4 4 4 0 0 1 4-4 5 5 0 0 1 9.8-1.5 3.5 3.5 0 0 1 4.2 3.5"/><circle cx="8" cy="20" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="16" cy="20" r="1"/></svg>`;
                 }
-                // 其他（多云、阴天等）默认为�?                return `<svg viewBox="0 0 24 24"><path d="M7 15a4 4 0 0 1-4-4 4 4 0 0 1 4-4 5 5 0 0 1 9.8-1.5 3.5 3.5 0 0 1 4.2 3.5"/></svg>`;
+                // 其他（多云、阴天等）默认为云                return `<svg viewBox="0 0 24 24"><path d="M7 15a4 4 0 0 1-4-4 4 4 0 0 1 4-4 5 5 0 0 1 9.8-1.5 3.5 3.5 0 0 1 4.2 3.5"/></svg>`;
             }
 
-            // 初始化天气（常驿显示�?            updateWeather();
+            // 初始化天气（常驻显示）            updateWeather();
         });
     </script>, 
     <style>
@@ -441,7 +442,7 @@
             margin-bottom: 5px;
         }
 
-        /* 百度建议列表的动画效�?*/
+        /* 百度建议列表的动画效?*/
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -554,7 +555,7 @@
 
     <div class="footer">
         <div class="copyright copyright-en">Copyright &copy; 2026 MatrixStudio. All rights reserved.</div>
-        <div class="copyright copyright-zh">版权所�?&copy; 2026 MatrixStudio 保留所有权利�?/div>
+        <div class="copyright copyright-zh">版权所有 &copy; 2026 MatrixStudio 保留所有权利。</div>
         <div class="engine-credit">Powered by Bing</div>
     </div>
 </body>

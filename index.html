@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>momo</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>m</text></svg>">
+    <title>index</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.querySelector('.search-input');
@@ -34,13 +35,12 @@
 
                     return getFallbackSuggestions(query);
                 } catch (error) {
-                    console.log('获取百度建议失败，使用备用方案');
+                    console.log('获取百度建议失败，使用备用方�?);
                     return getFallbackSuggestions(query);
                 }
             }
 
-            // JSONP方式的百度建议（备用）
-            function fetchBaiduJsonpSuggestions(query) {
+            // JSONP方式的百度建议（备用�?            function fetchBaiduJsonpSuggestions(query) {
                 return new Promise((resolve) => {
                     const callbackName = 'callback_' + Math.random().toString(36).substr(2, 9);
                     const script = document.createElement('script');
@@ -67,8 +67,7 @@
 
                     document.head.appendChild(script);
 
-                    // 5秒超时
-                    setTimeout(() => {
+                    // 5秒超�?                    setTimeout(() => {
                         if (window[callbackName]) {
                             delete window[callbackName];
                             document.head.removeChild(script);
@@ -119,7 +118,7 @@
                         displaySuggestions(suggestionsData);
                     }
                 } catch (error) {
-                    console.error('显示建议时出错:', error);
+                    console.error('显示建议时出�?', error);
                 }
             }
 
@@ -153,8 +152,7 @@
                 }
             }
 
-            // 智能建议生成器（使用百度API）
-            function getSmartSuggestions(query) {
+            // 智能建议生成器（使用百度API�?            function getSmartSuggestions(query) {
                 return fetchBaiduSuggestions(query);
             }
 
@@ -164,8 +162,57 @@
                     suggestions = null;
                 }
             }
+
+            // 天气小组件（右上角，内联 SVG 极简黑白风）
+            async function updateWeather() {
+                const iconEl = document.querySelector('.weather-icon');
+                const tempEl = document.querySelector('.weather-temp');
+                if (!iconEl || !tempEl) return;
+
+                try {
+                    // 使用 wttr.in 免费接口（无 key，基于 IP 或城市名）
+                    const city = 'Beijing';
+                    const res = await fetch(`https://wttr.in/${city}?format=j1`);
+                    if (!res.ok) throw new Error('fetch failed');
+
+                    const data = await res.json();
+                    const current = data.current_condition && data.current_condition[0];
+                    if (!current) throw new Error('no data');
+
+                    const temp = current.temp_C;
+                    const desc = (current.weatherDesc && current.weatherDesc[0] ? current.weatherDesc[0].value : '').toLowerCase();
+
+                    tempEl.textContent = `${temp}°`;
+                    iconEl.innerHTML = getMinimalWeatherIcon(desc);
+                } catch (err) {
+                    console.log('天气获取失败');
+                    tempEl.textContent = '--°';
+                    iconEl.innerHTML = '';
+                }
+            }
+
+            function getMinimalWeatherIcon(desc) {
+                // 黑白极简线条风内联 SVG，适配当前科技风
+                if (desc.includes('sunny') || desc.includes('clear')) {
+                    return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><g stroke-linecap="round"><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.5" y1="4.5" x2="6.4" y2="6.4"/><line x1="17.6" y1="17.6" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.4" y2="17.6"/><line x1="17.6" y1="6.4" x2="19.5" y2="4.5"/></g></svg>`;
+                }
+                if (desc.includes('rain') || desc.includes('shower') || desc.includes('drizzle')) {
+                    return `<svg viewBox="0 0 24 24"><path d="M7 15a4 4 0 0 1-4-4 4 4 0 0 1 4-4 5 5 0 0 1 9.8-1.5 3.5 3.5 0 0 1 4.2 3.5"/><line x1="8" y1="19" x2="8" y2="22"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="16" y1="19" x2="16" y2="22"/></svg>`;
+                }
+                if (desc.includes('snow')) {
+                    return `<svg viewBox="0 0 24 24"><path d="M7 15a4 4 0 0 1-4-4 4 4 0 0 1 4-4 5 5 0 0 1 9.8-1.5 3.5 3.5 0 0 1 4.2 3.5"/><circle cx="8" cy="20" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="16" cy="20" r="1"/></svg>`;
+                }
+                if (desc.includes('fog') || desc.includes('mist') || desc.includes('haze')) {
+                    return `<svg viewBox="0 0 24 24"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="13" x2="19" y2="13"/><line x1="5" y1="17" x2="19" y2="17"/></svg>`;
+                }
+                // 默认：云
+                return `<svg viewBox="0 0 24 24"><path d="M7 15a4 4 0 0 1-4-4 4 4 0 0 1 4-4 5 5 0 0 1 9.8-1.5 3.5 3.5 0 0 1 4.2 3.5"/></svg>`;
+            }
+
+            // 初始化天气（常驿显示）
+            updateWeather();
         });
-    </script>
+    </script>}], 
     <style>
         * {
             margin: 0;
@@ -190,18 +237,56 @@
             padding: 20px;
         }
 
-        .momo-logo {
-            font-size: 72px;
-            font-weight: 300;
-            font-style: italic;
-            margin-bottom: 30px;
+        .weather-widget {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             color: #ffffff;
-            font-family: 'Segoe Script', cursive;
-            letter-spacing: 3px;
-            text-shadow: 1px 1px 2px rgba(255,255,255,0.2);
-            position: relative;
-            display: inline-block;
+            font-size: 13px;
+            font-weight: 400;
+            z-index: 1000;
+            opacity: 0.85;
         }
+
+        .weather-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+        }
+
+        .weather-icon svg {
+            width: 16px;
+            height: 16px;
+            stroke: #ffffff;
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .weather-temp {
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        .logo {
+              font-size: 72px;
+              font-weight: 700;
+              font-style: italic;
+              margin-bottom: 30px;
+              color: #ffffff;
+              font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+              letter-spacing: 1px;
+              text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+              position: relative;
+              display: inline-block;
+              line-height: 1;
+          }
 
         .version {
             font-size: 14px;
@@ -312,7 +397,7 @@
             margin-bottom: 5px;
         }
 
-        /* 百度建议列表的动画效果 */
+        /* 百度建议列表的动画效�?*/
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -335,7 +420,7 @@
         .suggestion-item:nth-child(4) { animation-delay: 0.2s; }
         .suggestion-item:nth-child(5) { animation-delay: 0.25s; }
 
-        .baidu-credit {
+        .engine-credit {
             font-size: 12px;
             color: #666666;
             margin-top: 10px;
@@ -343,20 +428,13 @@
 
         /* 手机端适配 */
         @media (max-width: 768px) {
-            .momo-logo {
-                font-size: 54px;
-                margin-bottom: 20px;
-                position: relative;
-                display: inline-block;
-            }
-
-            .version {
-                font-size: 12px;
-                color: #ffffff;
-                position: absolute;
-                bottom: -8px;
-                right: -25px;
-            }
+              .logo {
+                  font-size: 54px;
+                  margin-bottom: 20px;
+                  position: relative;
+                  display: inline-block;
+                  letter-spacing: 0.5px;
+              }
 
             .search-container {
                 width: 90%;
@@ -385,17 +463,43 @@
                 line-height: 1.4;
             }
 
-            .baidu-credit {
+            .engine-credit {
                 font-size: 11px;
                 color: #666666;
                 margin-top: 8px;
+            }
+
+            .weather-widget {
+                top: 10px;
+                right: 12px;
+                font-size: 11px;
+                gap: 4px;
+            }
+
+            .weather-icon {
+                width: 14px;
+                height: 14px;
+            }
+
+            .weather-icon svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            .weather-temp {
+                font-size: 11px;
             }
         }
     </style>
 </head>
 <body>
+    <div class="weather-widget">
+        <span class="weather-icon"></span>
+        <span class="weather-temp">--°</span>
+    </div>
+
     <div class="main-content">
-        <div class="momo-logo">momo<span class="version">v0.0.1</span></div>
+        <div class="logo">index<span class="version">v0.0.1</span></div>
 
         <div class="search-container">
             <form class="search-form" action="https://cn.bing.com/search" method="GET">
@@ -405,9 +509,9 @@
     </div>
 
     <div class="footer">
-        <div class="copyright copyright-en">Copyright © 2026 Ren Jifeng & Wang Ziwen All Right Reserved</div>
-        <div class="copyright copyright-zh">版权所有 © 2026 任继锋 & 汪子雯 保留所有权利。</div>
-        <div class="baidu-credit">Powered by Bing & Baidu</div>
+        <div class="copyright copyright-en">Copyright &copy; 2026 MatrixStudio. All rights reserved.</div>
+        <div class="copyright copyright-zh">版权所有 &copy; 2026 MatrixStudio 保留所有权利。</div>
+        <div class="engine-credit">Powered by Bing</div>
     </div>
 </body>
 </html>

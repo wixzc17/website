@@ -48,7 +48,7 @@ export default async function handler(request, response) {
     }
 
     // 签发会话 token（有效期 7 天），用于后续接口的身份验证
-    const token = issueToken(id);
+    const token = issueToken(id, hash);
 
     // 登录成功
     return response.status(200).json({
@@ -59,7 +59,7 @@ export default async function handler(request, response) {
 }
 
 // 生成会话 token：ID.时间戳.签名（签名用登录哈希加盐，够用且无外部依赖）
-function issueToken(id) {
+function issueToken(id, hash) {
     const ts = Date.now();
     const material = id + '.' + ts + '.' + hash + '.static-salt';
     const sig = crypto.createHash('md5').update(material).digest('hex').slice(0, 16);

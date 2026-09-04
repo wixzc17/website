@@ -19,14 +19,14 @@
                 return btoa(String.fromCharCode(...iv)) + '.' + btoa(String.fromCharCode(...new Uint8Array(ct)));
             },
             async decrypt(key, payload) {
-                const parts = payload.split('.');
-                if (parts.length !== 2) return null;
-                const iv = Uint8Array.from(atob(parts[0]), c => c.charCodeAt(0));
-                const ct = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
                 try {
+                    const parts = payload.split('.');
+                    if (parts.length !== 2) return null;
+                    const iv = Uint8Array.from(atob(parts[0]), c => c.charCodeAt(0));
+                    const ct = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
                     const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ct);
                     return new TextDecoder().decode(pt);
-                } catch (e) { return null; }
+                } catch (e) { return null; } // 解码或解密失败=格式不对/被篡改/密钥不符
             }
         };
 

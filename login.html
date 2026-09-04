@@ -69,9 +69,14 @@
                     const data = await res.json();
 
                     if (data.ok) {
-                        // 携带显示名跳转（仅展示用途，不是安全凭证）
-                        const name = encodeURIComponent(data.name || ('@' + id));
-                        window.location.href = 'static.html?name=' + name;
+                        // 保存会话信息（token 用于接口验证，hash 用于派生消息加密密钥）
+                        try {
+                            sessionStorage.setItem('static_id', id);
+                            sessionStorage.setItem('static_name', data.name || ('@' + id));
+                            sessionStorage.setItem('static_token', data.token || '');
+                            sessionStorage.setItem('static_hash', hash);
+                        } catch (e) { /* 隐私模式下存不进去，聊天功能将不可用 */ }
+                        window.location.href = 'static.html';
                     } else {
                         loginError.textContent = data.message || 'ID 或密码不正确';
                         loginBtn.disabled = false;

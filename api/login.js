@@ -2,6 +2,8 @@
 // 环境变量 STATIC_USERS 格式：
 // { "用户ID": { "hash": "密码的SHA-256", "name": "显示用户名" }, ... }
 
+import crypto from 'crypto';
+
 export default async function handler(request, response) {
     // 只接受 POST
     if (request.method !== 'POST') {
@@ -45,9 +47,21 @@ export default async function handler(request, response) {
         return response.status(200).json({ ok: false, message: 'ID 或密码不正确' });
     }
 
+    // 签发会话 token（有效期 7 天），用于后续接口的身份验证
+    const token = issueToken(id);
+
     // 登录成功
     return response.status(200).json({
         ok: true,
-        name: user.name || ('@' + id)
+        name: user.name || ('@' + id),
+        token: token
     });
+}
+
+// 生成会话 token：ID.时间戳.签名（签名用登录哈希加盐，够用且无外部依赖）
+function issueToken(id) {
+    const ts = Date.now();
+    const material = id + '.' + ts + '.' + hash + '.static-salt';
+    const sig = crypto.createHash('md5').update(material).digest('hex').slice(0, 16);
+    return id + '.' + ts + '.' + sig;
 }

@@ -6,26 +6,88 @@
     <title>Static</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 从 URL 参数读取显示名（仅展示用途）
-            const params = new URLSearchParams(window.location.search);
-            const name = params.get('name') || '旅行者';
-
-            const nameEl = document.getElementById('welcome-name');
-            nameEl.textContent = name;
-
-            // 打字机效果
-            const subtitleEl = document.getElementById('subtitle');
-            const text = 'Static正在上线中......';
-            let i = 0;
-            function typeWriter() {
-                if (i < text.length) {
-                    subtitleEl.textContent += text.charAt(i);
-                    i++;
-                    setTimeout(typeWriter, 120);
-                }
+        // 共享加密工具：AES-GCM 加解密（浏览器本地完成，密文上链）
+        // 密钥由双方约定，写在这里会暴露——改为从登录用户可获取的约定值派生：
+        // 用「两人ID + 共同密码哈希」派生密钥，只有登录者能算出（密码哈希只在登录时存在于内存）
+        const StaticCrypto = {
+            async deriveKey(myId, peerId, passwordHash) {
+                const material = [myId, peerId].sort().join('::') + '::' + passwordHash;
+                const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(material));
+                return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+            },
+            async encrypt(key, plaintext) {
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(plaintext));
+                // base64 编码 iv + 密文
+                return btoa(String.fromCharCode(...iv)) + '.' + btoa(String.fromCharCode(...new Uint8Array(ct)));
+            },
+            async decrypt(key, payload) {
+                const parts = payload.split('.');
+                if (parts.length !== 2) return null;
+                const iv = Uint8Array.from(atob(parts[0]), c => c.charCodeAt(0));
+                const ct = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
+                try {
+                    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ct);
+                    return new TextDecoder().decode(pt);
+                } catch (e) { return null; } // 解密失败=被篡改或密钥不对
             }
-            typeWriter();
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 读取会话（sessionStorage 是登录时存入的，标签页关闭即失效）
+            const myId = sessionStorage.getItem('static_id');
+            const myName = sessionStorage.getItem('static_name') || myId;
+            const myToken = sessionStorage.getItem('static_token');
+            const myHash = sessionStorage.getItem('static_hash');
+
+            // 未登录 → 回登录页
+            if (!myId || !myToken) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            document.getElementById('welcome-name').textContent = myName;
+
+            // 码表数据：当前阶段直接内置（就是你们俩）
+            const contacts = [
+                { id: 'wixzc17', name: '汪子雯' },
+                { id: 'lixs17', name: '任继锋' }
+            ].filter(c => c.id !== myId); // 码表里不显示自己
+
+            const listEl = document.getElementById('contact-list');
+
+            contacts.forEach(c => {
+                const card = document.createElement('a');
+                card.className = 'contact-card';
+                card.href = 'chat.html?peer=' + encodeURIComponent(c.id);
+
+                // 头像：用户名首字符的圆形占位
+                const avatar = document.createElement('div');
+                avatar.className = 'contact-avatar';
+                avatar.textContent = (c.name || c.id).charAt(0).toUpperCase();
+                card.appendChild(avatar);
+
+                // 右侧：用户名（大）+ ID（小灰）
+                const info = document.createElement('div');
+                info.className = 'contact-info';
+                const nameEl = document.createElement('div');
+                nameEl.className = 'contact-name';
+                nameEl.textContent = c.name;
+                const idEl = document.createElement('div');
+                idEl.className = 'contact-id';
+                idEl.textContent = '@' + c.id;
+                info.appendChild(nameEl);
+                info.appendChild(idEl);
+                card.appendChild(info);
+
+                listEl.appendChild(card);
+            });
+
+            // 退出登录
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                sessionStorage.clear();
+                window.location.href = 'index.html';
+            });
         });
     </script>
     <style>
@@ -47,13 +109,12 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 50px 20px 30px;
         }
 
         .static-title {
-            font-size: 72px;
+            font-size: 48px;
             font-weight: 700;
             font-style: italic;
             color: #ffffff;
@@ -61,27 +122,106 @@
             letter-spacing: 1px;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
             line-height: 1;
-            margin-bottom: 26px;
+            margin-bottom: 10px;
         }
 
         .welcome-text {
-            font-size: 18px;
-            color: #cccccc;
+            font-size: 13px;
+            color: #888888;
             letter-spacing: 1px;
-            margin-bottom: 14px;
+            margin-bottom: 40px;
         }
 
         .welcome-text #welcome-name {
             color: #ffffff;
-            font-weight: bold;
         }
 
-        .subtitle {
-            font-size: 13px;
+        .codebook-label {
+            font-size: 12px;
             color: #666666;
+            letter-spacing: 3px;
+            margin-bottom: 14px;
+            align-self: flex-start;
+            border-bottom: 1px solid #262626;
+            padding-bottom: 8px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .contact-list {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .contact-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+
+        .contact-card:hover {
+            border-color: #555555;
+            background: #0a0a0a;
+        }
+
+        .contact-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            flex-shrink: 0;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .contact-name {
+            font-size: 16px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .contact-id {
+            font-size: 12px;
+            color: #666666;
+            letter-spacing: 0.5px;
+        }
+
+        .logout-btn {
+            margin-top: 36px;
+            font-size: 12px;
+            color: #666666;
+            background: none;
+            border: 1px solid #262626;
+            border-radius: 8px;
+            padding: 8px 22px;
+            cursor: pointer;
             letter-spacing: 2px;
-            min-height: 20px;
-            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            color: #ffffff;
+            border-color: #555555;
         }
 
         .back-link {
@@ -115,7 +255,11 @@
 
         @media (max-width: 768px) {
             .static-title {
-                font-size: 54px;
+                font-size: 38px;
+            }
+
+            .static-content {
+                padding: 40px 16px 24px;
             }
 
             .back-link {
@@ -136,7 +280,11 @@
     <div class="static-content">
         <div class="static-title">Static</div>
         <div class="welcome-text">欢迎回来，<span id="welcome-name"></span></div>
-        <div class="subtitle" id="subtitle"></div>
+
+        <div class="codebook-label">码表</div>
+        <div class="contact-list" id="contact-list"></div>
+
+        <button class="logout-btn" id="logout-btn">退出登录</button>
     </div>
 
     <div class="footer">

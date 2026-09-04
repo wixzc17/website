@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>更新日志</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000000;
+            font-family: Arial, sans-serif;
+        }
+
+        .changelog-content {
+            flex: 1;
+            width: 100%;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 60px 20px 40px;
+        }
+
+        .changelog-header {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #333333;
+            padding-bottom: 20px;
+        }
+
+        .changelog-title {
+            font-size: 32px;
+            font-weight: 700;
+            font-style: italic;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+
+        .changelog-version {
+            font-size: 14px;
+            color: #666666;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .changelog-body {
+            color: #cccccc;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        /* 更新记录条目（内容后续填充时使用） */
+        .log-entry {
+            margin-bottom: 36px;
+        }
+
+        .log-entry h2 {
+            font-size: 16px;
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .log-entry .log-date {
+            font-size: 12px;
+            color: #666666;
+            margin-left: 8px;
+            font-weight: 400;
+        }
+
+        .log-entry ul {
+            list-style: none;
+        }
+
+        .log-entry li {
+            padding-left: 16px;
+            position: relative;
+            margin-bottom: 6px;
+        }
+
+        .log-entry li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 6px;
+            height: 1px;
+            background: #666666;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 16px;
+            left: 20px;
+            font-size: 13px;
+            color: #666666;
+            text-decoration: none;
+            letter-spacing: 0.5px;
+            opacity: 0.85;
+            transition: color 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-link:hover {
+            color: #ffffff;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .copyright {
+            font-size: 14px;
+            color: #888888;
+            font-style: italic;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        /* 手机端适配 */
+        @media (max-width: 768px) {
+            .changelog-content {
+                padding: 40px 20px 30px;
+            }
+
+            .changelog-title {
+                font-size: 26px;
+            }
+
+            .back-link {
+                top: 10px;
+                left: 12px;
+                font-size: 11px;
+            }
+
+            .copyright {
+                font-size: 12px;
+                line-height: 1.4;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a class="back-link" href="index.html">&larr; 返回</a>
+
+    <div class="changelog-content">
+        <div class="changelog-header">
+            <div class="changelog-title">changelog</div>
+            <div class="changelog-version">更新日志</div>
+        </div>
+
+        <div class="changelog-body">
+            <!-- 内容区域：每条更新一个 log-entry
+            <div class="log-entry">
+                <h2>v0.0.1 <span class="log-date">2026-09-04</span></h2>
+                <ul>
+                    <li>上线第一个版本</li>
+                </ul>
+            </div>
+            -->
+            <p>暂无更新记录。</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="copyright">Copyright &copy; 2026 MatrixStudio. All rights reserved.</div>
+    </div>
+</body>
+</html>

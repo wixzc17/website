@@ -45,15 +45,34 @@
             // 对话对象
             const params = new URLSearchParams(window.location.search);
             const peerId = (params.get('peer') || '').replace(/^@/, '');
-            const peerName = params.get('name') || ('@' + peerId);
+            const peerAvatarEl = document.getElementById('peer-avatar-char');
 
             if (!/^[a-zA-Z0-9]+$/.test(peerId)) {
                 window.location.href = 'static.html';
                 return;
             }
 
-            document.getElementById('peer-name').textContent = peerName;
+            document.getElementById('peer-name').textContent = '@' + peerId;
             document.getElementById('peer-id').textContent = '@' + peerId;
+            peerAvatarEl.textContent = '@';
+
+            // 拉取对方最新资料（改名/换头像后同步）
+            (async function() {
+                try {
+                    const res = await fetch('/api/profile?id=' + encodeURIComponent(peerId));
+                    const data = await res.json();
+                    if (data.ok) {
+                        document.getElementById('peer-name').textContent = data.name;
+                        if (data.avatar) {
+                            peerAvatarEl.textContent = '';
+                            peerAvatarEl.style.backgroundImage = 'url(' + data.avatar + ')';
+                            peerAvatarEl.classList.add('has-img');
+                        } else {
+                            peerAvatarEl.textContent = data.name.charAt(0).toUpperCase();
+                        }
+                    }
+                } catch (e) { /* 拉取失败保持 ID 显示 */ }
+            })();
 
             // 加密密钥（两人ID + 密码哈希派生）
             const key = await StaticCrypto.deriveKey(myId, peerId, myHash);
@@ -213,6 +232,9 @@
             font-weight: 700;
             color: #ffffff;
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
         }
 
         .peer-info {
@@ -369,17 +391,5 @@
         <button class="send-btn" id="send-btn">发送</button>
     </div>
 
-    <script>
-        // 头像字符（放在最后的内联 script，确保 peerName 已设置）
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                const avatarEl = document.getElementById('peer-avatar-char');
-                const nameEl = document.getElementById('peer-name');
-                if (avatarEl && nameEl && nameEl.textContent) {
-                    avatarEl.textContent = nameEl.textContent.charAt(0).toUpperCase();
-                }
-            }, 0);
-        });
-    </script>
 </body>
 </html>

@@ -46,43 +46,92 @@
                 return;
             }
 
-            // 左上角显示自己的身份
+            // 左上角显示自己的身份（头像先用名字首字符占位）
             document.getElementById('me-name').textContent = myName;
             document.getElementById('me-id').textContent = '@' + myId;
+            const meAvatar = document.getElementById('me-avatar');
+            meAvatar.textContent = (myName || '@').charAt(0).toUpperCase();
 
-            // 码表数据：当前阶段直接内置（就是你们俩）
-            const contacts = [
-                { id: 'wixzc17', name: '汪子雯' },
-                { id: 'lixs17', name: '任继锋' }
-            ].filter(c => c.id !== myId); // 码表里不显示自己
+            // ---------- 侧边栏 ----------
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
 
+            function openSidebar() {
+                sidebar.classList.add('open');
+                sidebarOverlay.classList.add('show');
+            }
+            function closeSidebar() {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('show');
+            }
+            meAvatar.addEventListener('click', openSidebar);
+            sidebarOverlay.addEventListener('click', closeSidebar);
+            document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
+
+            // ---------- 资料拉取（自己的 + 联系人的，全部来自服务器，保证改名/换头像后同步） ----------
+            async function fetchProfile(id) {
+                try {
+                    const res = await fetch('/api/profile?id=' + encodeURIComponent(id));
+                    const data = await res.json();
+                    if (data.ok) return { name: data.name, avatar: data.avatar };
+                } catch (e) {}
+                return null;
+            }
+
+            // 自己的资料 → 更新左上角名字和头像
+            fetchProfile(myId).then(p => {
+                if (p) {
+                    document.getElementById('me-name').textContent = p.name;
+                    if (p.avatar) {
+                        meAvatar.textContent = '';
+                        meAvatar.style.backgroundImage = 'url(' + p.avatar + ')';
+                        meAvatar.classList.add('has-img');
+                    }
+                }
+            });
+
+            // 码表：所有注册用户（就是你们俩），不显示自己
+            const allIds = ['wixzc17', 'lixs17'];
             const listEl = document.getElementById('contact-list');
 
-            contacts.forEach(c => {
+            allIds.filter(id => id !== myId).forEach(id => {
                 const card = document.createElement('a');
                 card.className = 'contact-card';
-                card.href = 'chat.html?peer=' + encodeURIComponent(c.id) + '&name=' + encodeURIComponent(c.name);
+                card.href = 'chat.html?peer=' + encodeURIComponent(id);
 
-                // 头像：用户名首字符的圆形占位
+                // 头像占位（拉到资料后替换）
                 const avatar = document.createElement('div');
                 avatar.className = 'contact-avatar';
-                avatar.textContent = (c.name || c.id).charAt(0).toUpperCase();
+                avatar.textContent = '@';
                 card.appendChild(avatar);
 
-                // 右侧：用户名（大）+ ID（小灰）
                 const info = document.createElement('div');
                 info.className = 'contact-info';
                 const nameEl = document.createElement('div');
                 nameEl.className = 'contact-name';
-                nameEl.textContent = c.name;
+                nameEl.textContent = '@' + id;
                 const idEl = document.createElement('div');
                 idEl.className = 'contact-id';
-                idEl.textContent = '@' + c.id;
+                idEl.textContent = '@' + id;
                 info.appendChild(nameEl);
                 info.appendChild(idEl);
                 card.appendChild(info);
 
                 listEl.appendChild(card);
+
+                // 从服务器拉取对方最新资料
+                fetchProfile(id).then(p => {
+                    if (p) {
+                        nameEl.textContent = p.name;
+                        if (p.avatar) {
+                            avatar.textContent = '';
+                            avatar.style.backgroundImage = 'url(' + p.avatar + ')';
+                            avatar.classList.add('has-img');
+                        } else {
+                            avatar.textContent = p.name.charAt(0).toUpperCase();
+                        }
+                    }
+                });
             });
 
             // 退出登录（同时清除本设备的自动登录记忆）
@@ -187,6 +236,8 @@
             color: #ffffff;
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
         }
 
         .contact-info {
@@ -247,9 +298,38 @@
             top: 64px;
             left: 20px;
             display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .me-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            cursor: pointer;
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+            transition: border-color 0.3s ease;
+        }
+
+        .me-avatar:hover {
+            border-color: #ffffff;
+        }
+
+        .me-text {
+            display: flex;
             flex-direction: column;
             gap: 2px;
-            z-index: 1000;
         }
 
         .me-name {
@@ -261,6 +341,79 @@
         .me-id {
             font-size: 12px;
             color: #888888;
+        }
+
+        /* 侧边栏 */
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1999;
+        }
+
+        .sidebar-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 240px;
+            background: #0a0a0a;
+            border-right: 1px solid #262626;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 2000;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            color: #666666;
+            letter-spacing: 3px;
+            padding: 8px 20px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-item {
+            display: block;
+            padding: 12px 20px;
+            font-size: 14px;
+            color: #ffffff;
+            text-decoration: none;
+            transition: background 0.2s ease;
+        }
+
+        .sidebar-item:hover {
+            background: #1a1a1a;
+        }
+
+        .sidebar-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 18px;
+            color: #888888;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        .sidebar-close:hover {
+            color: #ffffff;
         }
 
         .footer {
@@ -294,6 +447,13 @@
             .me-info {
                 top: 50px;
                 left: 12px;
+                gap: 8px;
+            }
+
+            .me-avatar {
+                width: 38px;
+                height: 38px;
+                font-size: 15px;
             }
 
             .me-name {
@@ -314,8 +474,19 @@
     <a class="back-link" href="index.html">&larr; index</a>
 
     <div class="me-info">
-        <div class="me-name" id="me-name"></div>
-        <div class="me-id" id="me-id"></div>
+        <div class="me-avatar" id="me-avatar" title="个人资料">@</div>
+        <div class="me-text">
+            <div class="me-name" id="me-name"></div>
+            <div class="me-id" id="me-id"></div>
+        </div>
+    </div>
+
+    <!-- 侧边栏（点头像弹出） -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <div class="sidebar" id="sidebar">
+        <button class="sidebar-close" id="sidebar-close" type="button">&times;</button>
+        <div class="sidebar-title">菜单</div>
+        <a class="sidebar-item" href="profile.html">个人资料</a>
     </div>
 
     <div class="static-content">

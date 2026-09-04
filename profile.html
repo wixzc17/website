@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static · 个人资料</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const myId = sessionStorage.getItem('static_id');
+            const myName = sessionStorage.getItem('static_name') || myId;
+            const myToken = sessionStorage.getItem('static_token');
+
+            if (!myId || !myToken) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const avatarEl = document.getElementById('profile-avatar');
+            const nameInput = document.getElementById('name-input');
+            const saveNameBtn = document.getElementById('save-name-btn');
+            const avatarInput = document.getElementById('avatar-input');
+            const avatarBtn = document.getElementById('avatar-btn');
+            const removeAvatarBtn = document.getElementById('remove-avatar-btn');
+            const statusEl = document.getElementById('profile-status');
+
+            // 待保存的头像（选完图片先暂存，实时预览，点「使用头像」才上传）
+            let pendingAvatar = null;
+
+            function showStatus(msg, ok) {
+                statusEl.textContent = msg;
+                statusEl.style.color = ok ? '#888888' : '#aa6666';
+                setTimeout(() => { statusEl.textContent = ''; }, 3000);
+            }
+
+            // ---------- 拉取当前资料 ----------
+            async function loadProfile() {
+                try {
+                    const res = await fetch('/api/profile?id=' + encodeURIComponent(myId));
+                    const data = await res.json();
+                    if (data.ok) {
+                        nameInput.value = data.name;
+                        renderAvatar(data.avatar, data.name);
+                    } else {
+                        nameInput.value = myName;
+                        renderAvatar(null, myName);
+                    }
+                } catch (e) {
+                    nameInput.value = myName;
+                    renderAvatar(null, myName);
+                }
+            }
+
+            function renderAvatar(avatar, name) {
+                if (avatar) {
+                    avatarEl.textContent = '';
+                    avatarEl.style.backgroundImage = 'url(' + avatar + ')';
+                    avatarEl.classList.add('has-img');
+                } else {
+                    avatarEl.textContent = (name || '@').charAt(0).toUpperCase();
+                    avatarEl.style.backgroundImage = '';
+                    avatarEl.classList.remove('has-img');
+                }
+            }
+
+            // ---------- 修改用户名 ----------
+            saveNameBtn.addEventListener('click', async function() {
+                const name = nameInput.value.trim();
+                if (!name) { showStatus('用户名不能为空', false); return; }
+                if (name.length > 16) { showStatus('用户名最多 16 个字符', false); return; }
+
+                saveNameBtn.disabled = true;
+                saveNameBtn.textContent = '保存中...';
+                try {
+                    const res = await fetch('/api/profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, name: name })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        sessionStorage.setItem('static_name', data.name);
+                        renderAvatar(pendingAvatar || (data.avatar), data.name);
+                        showStatus('用户名已更新', true);
+                    } else if (res.status === 401) {
+                        window.location.href = 'login.html';
+                    } else {
+                        showStatus(data.message || '保存失败', false);
+                    }
+                } catch (e) {
+                    showStatus('网络异常，请稍后再试', false);
+                }
+                saveNameBtn.disabled = false;
+                saveNameBtn.textContent = '保存';
+            });
+
+            // ---------- 选择头像（本地预览） ----------
+            avatarInput.addEventListener('change', function() {
+                const file = avatarInput.files && avatarInput.files[0];
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    showStatus('请选择图片文件', false);
+                    return;
+                }
+
+                // 压缩到 128×128 的 data URI（canvas 本地完成，不经过服务器）
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 128;
+                        canvas.height = 128;
+                        const ctx = canvas.getContext('2d');
+                        // 居中裁剪成正方形
+                        const side = Math.min(img.width, img.height);
+                        const sx = (img.width - side) / 2;
+                        const sy = (img.height - side) / 2;
+                        ctx.drawImage(img, sx, sy, side, side, 0, 0, 128, 128);
+                        pendingAvatar = canvas.toDataURL('image/jpeg', 0.85);
+                        avatarEl.textContent = '';
+                        avatarEl.style.backgroundImage = 'url(' + pendingAvatar + ')';
+                        avatarEl.classList.add('has-img');
+                        avatarBtn.textContent = '使用头像';
+                        removeAvatarBtn.style.display = 'inline';
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+                avatarInput.value = '';
+            });
+
+            // ---------- 上传头像 ----------
+            avatarBtn.addEventListener('click', async function() {
+                if (!pendingAvatar) {
+                    avatarInput.click();
+                    return;
+                }
+                avatarBtn.disabled = true;
+                avatarBtn.textContent = '上传中...';
+                try {
+                    const res = await fetch('/api/profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, name: nameInput.value.trim() || myName, avatar: pendingAvatar })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        pendingAvatar = null;
+                        avatarBtn.textContent = '修改头像';
+                        removeAvatarBtn.style.display = data.avatar ? 'inline' : 'none';
+                        showStatus('头像已更新', true);
+                    } else if (res.status === 401) {
+                        window.location.href = 'login.html';
+                    } else {
+                        showStatus(data.message || '上传失败', false);
+                    }
+                } catch (e) {
+                    showStatus('网络异常，请稍后再试', false);
+                }
+                avatarBtn.disabled = false;
+                avatarBtn.textContent = pendingAvatar ? '使用头像' : '修改头像';
+            });
+
+            // ---------- 移除头像（恢复首字符占位） ----------
+            removeAvatarBtn.addEventListener('click', async function() {
+                if (!confirm('确定移除当前头像？')) return;
+                pendingAvatar = null;
+                removeAvatarBtn.disabled = true;
+                try {
+                    const res = await fetch('/api/profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, name: nameInput.value.trim() || myName, avatar: null })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        renderAvatar(null, data.name);
+                        avatarBtn.textContent = '修改头像';
+                        removeAvatarBtn.style.display = 'none';
+                        showStatus('头像已移除', true);
+                    } else if (res.status === 401) {
+                        window.location.href = 'login.html';
+                    }
+                } catch (e) {
+                    showStatus('网络异常，请稍后再试', false);
+                }
+                removeAvatarBtn.disabled = false;
+            });
+
+            removeAvatarBtn.style.display = 'none';
+            loadProfile();
+        });
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000000;
+            font-family: Arial, sans-serif;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 16px;
+            left: 20px;
+            font-size: 13px;
+            color: #ffffff;
+            text-decoration: none;
+            letter-spacing: 0.5px;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-link:hover {
+            opacity: 0.7;
+        }
+
+        .profile-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 70px 20px 30px;
+        }
+
+        .profile-title {
+            font-size: 28px;
+            font-weight: 700;
+            font-style: italic;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            letter-spacing: 1px;
+            margin-bottom: 40px;
+        }
+
+        .profile-section {
+            width: 100%;
+            max-width: 420px;
+            margin-bottom: 36px;
+        }
+
+        .section-label {
+            font-size: 12px;
+            color: #666666;
+            letter-spacing: 3px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid #262626;
+            padding-bottom: 8px;
+        }
+
+        .avatar-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .profile-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            border: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .avatar-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-btn {
+            border: 1px solid #404040;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-size: 13px;
+            background: #000000;
+            color: #ffffff;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .name-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .name-row input {
+            flex: 1;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            padding: 11px 14px;
+            font-size: 14px;
+            background: #000000;
+            color: #ffffff;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .name-row input:focus {
+            border-color: #ffffff;
+        }
+
+        .profile-status {
+            min-height: 20px;
+            font-size: 13px;
+            color: #888888;
+            text-align: center;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .copyright {
+            font-size: 14px;
+            color: #888888;
+            font-style: italic;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .back-link {
+                top: 10px;
+                left: 12px;
+                font-size: 11px;
+            }
+
+            .profile-content {
+                padding: 50px 16px 24px;
+            }
+
+            .avatar-row {
+                gap: 14px;
+            }
+
+            .copyright {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a class="back-link" href="static.html">&larr; Static</a>
+
+    <div class="profile-content">
+        <div class="profile-title">个人资料</div>
+
+        <!-- 头像 -->
+        <div class="profile-section">
+            <div class="section-label">头像</div>
+            <div class="avatar-row">
+                <div class="profile-avatar" id="profile-avatar">@</div>
+                <div class="avatar-actions">
+                    <button type="button" class="action-btn" id="avatar-btn">修改头像</button>
+                    <button type="button" class="action-btn" id="remove-avatar-btn">移除头像</button>
+                    <input type="file" id="avatar-input" accept="image/*" style="display: none">
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户名 -->
+        <div class="profile-section">
+            <div class="section-label">用户名</div>
+            <div class="name-row">
+                <input type="text" id="name-input" maxlength="16" placeholder="输入新的用户名" autocomplete="off">
+                <button type="button" class="action-btn" id="save-name-btn">保存</button>
+            </div>
+        </div>
+
+        <div class="profile-status" id="profile-status"></div>
+    </div>
+
+    <div class="footer">
+        <div class="copyright">Copyright &copy; 2026 Ren Jifeng &amp; Wang Ziwen. All rights reserved.</div>
+    </div>
+</body>
+</html>

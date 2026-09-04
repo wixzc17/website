@@ -79,7 +79,19 @@
                         showSuggestions(value);
                     }, 300);
                 } else {
-                    hideSuggestions();
+                    // 输入清空后，聚焦状态下显示历史记录
+                    if (document.activeElement === searchInput) {
+                        showHistory();
+                    } else {
+                        hideSuggestions();
+                    }
+                }
+            });
+
+            // 聚焦时：输入框为空则显示历史
+            searchInput.addEventListener('focus', function() {
+                if (searchInput.value.trim().length === 0) {
+                    showHistory();
                 }
             });
 
@@ -91,6 +103,11 @@
 
             searchInput.addEventListener('blur', function() {
                 setTimeout(() => hideSuggestions(), 200);
+            });
+
+            // 提交搜索时记录历史
+            searchForm.addEventListener('submit', function() {
+                saveHistory(searchInput.value.trim());
             });
 
             async function showSuggestions(query) {
@@ -145,6 +162,86 @@
             // 智能建议生成器（使用百度API）
             function getSmartSuggestions(query) {
                 return fetchBaiduSuggestions(query);
+            }
+
+            // ==================== 本地搜索历史 ====================
+            const HISTORY_KEY = 'searchHistory';
+            const HISTORY_MAX = 10;
+
+            function getHistory() {
+                try {
+                    const data = JSON.parse(localStorage.getItem(HISTORY_KEY));
+                    return Array.isArray(data) ? data.filter(s => typeof s === 'string') : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveHistory(query) {
+                if (!query) return;
+                let history = getHistory();
+                // 重复的词提到顶部，不重复占位
+                history = history.filter(s => s !== query);
+                history.unshift(query);
+                history = history.slice(0, HISTORY_MAX);
+                try {
+                    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                } catch (e) { /* 存储失败（如隐私模式）静默忽略 */ }
+            }
+
+            function clearHistory() {
+                try {
+                    localStorage.removeItem(HISTORY_KEY);
+                } catch (e) { /* 忽略 */ }
+                hideSuggestions();
+            }
+
+            // 显示历史记录（复用建议下拉框的样式）
+            function showHistory() {
+                hideSuggestions();
+                const history = getHistory();
+                if (history.length === 0) return;
+
+                suggestions = document.createElement('div');
+                suggestions.className = 'suggestions';
+
+                history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item history-item';
+
+                    // 左侧小历史图标（极简线条风）
+                    const icon = document.createElement('span');
+                    icon.className = 'history-icon';
+                    icon.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+                    div.appendChild(icon);
+
+                    const label = document.createElement('span');
+                    label.textContent = item;
+                    div.appendChild(label);
+
+                    div.addEventListener('click', function() {
+                        // 按用户偏好：仅填入搜索框，不直接搜索
+                        searchInput.style.transition = 'opacity 0.3s ease';
+                        searchInput.style.opacity = '0';
+                        setTimeout(() => {
+                            searchInput.value = item;
+                            searchInput.style.opacity = '1';
+                            hideSuggestions();
+                            searchInput.focus();
+                        }, 300);
+                    });
+                    suggestions.appendChild(div);
+                });
+
+                // 底部"清空历史"按钮
+                const clearDiv = document.createElement('div');
+                clearDiv.className = 'history-clear';
+                clearDiv.textContent = '清空历史';
+                clearDiv.addEventListener('click', clearHistory);
+                suggestions.appendChild(clearDiv);
+
+                searchForm.style.position = 'relative';
+                searchForm.appendChild(suggestions);
             }
 
             function hideSuggestions() {
@@ -279,6 +376,44 @@
             right: 20px;
             height: 1px;
             background: #ffffff;
+        }
+
+        /* 历史记录条目 */
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .history-icon svg {
+            width: 14px;
+            height: 14px;
+            stroke: #666666;
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .history-clear {
+            padding: 8px 20px;
+            font-size: 12px;
+            color: #666666;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .history-clear:hover {
+            color: #ffffff;
         }
 
         .footer {

@@ -36,7 +36,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             // 读取会话（sessionStorage 是登录时存入的，标签页关闭即失效）
             const myId = sessionStorage.getItem('static_id');
-            const myName = sessionStorage.getItem('static_name') || myId;
             const myToken = sessionStorage.getItem('static_token');
             const myHash = sessionStorage.getItem('static_hash');
 
@@ -46,7 +45,7 @@
                 return;
             }
 
-            document.getElementById('welcome-name').textContent = myName;
+            // 欢迎语不再显示名字，只保留「欢迎回来」
 
             // 码表数据：当前阶段直接内置（就是你们俩）
             const contacts = [
@@ -130,10 +129,6 @@
             color: #888888;
             letter-spacing: 1px;
             margin-bottom: 40px;
-        }
-
-        .welcome-text #welcome-name {
-            color: #ffffff;
         }
 
         .codebook-label {
@@ -279,7 +274,7 @@
 
     <div class="static-content">
         <div class="static-title">Static</div>
-        <div class="welcome-text">欢迎回来，<span id="welcome-name"></span></div>
+        <div class="welcome-text">欢迎回来</div>
 
         <div class="codebook-label">码表</div>
         <div class="contact-list" id="contact-list"></div>

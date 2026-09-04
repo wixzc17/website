@@ -36,10 +36,16 @@
                         cleanup();
 
                         if (data && data.g && data.g.length > 0) {
-                            resolve(data.g
+                            const items = data.g
                                 .filter(item => item.q && typeof item.q === 'string')
-                                .map(item => item.q)
-                                .slice(0, 5));
+                                .map(item => item.q);
+
+                            // 百度会混入热门/推广性质的联想词，和输入内容无关，
+                            // 只保留包含原始输入的建议，让下拉列表更"贴合"输入
+                            const lowerQuery = query.toLowerCase();
+                            const related = items.filter(s => s.toLowerCase().includes(lowerQuery));
+
+                            resolve(related.length > 0 ? related.slice(0, 5) : items.slice(0, 3));
                         } else {
                             resolve([]);
                         }

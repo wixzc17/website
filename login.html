@@ -22,12 +22,26 @@
             const loginError = document.getElementById('login-error');
             const loginBtn = document.getElementById('login-btn');
 
-            // 哈希生成工具的元素
+            // 哈希生成工具的元素（隐藏彩蛋：连点标题 7 次才会出现）
             const toolToggle = document.getElementById('tool-toggle');
             const toolPanel = document.getElementById('tool-panel');
             const toolPassword = document.getElementById('tool-password');
             const toolBtn = document.getElementById('tool-btn');
             const toolResult = document.getElementById('tool-result');
+            const loginTitle = document.getElementById('login-title');
+
+            let titleClicks = 0;
+            let clickTimer = null;
+            loginTitle.addEventListener('click', function() {
+                titleClicks++;
+                clearTimeout(clickTimer);
+                clickTimer = setTimeout(() => { titleClicks = 0; }, 1500);
+                if (titleClicks >= 7) {
+                    titleClicks = 0;
+                    toolToggle.style.display = 'inline';
+                    toolToggle.click();
+                }
+            });
 
             // 登录
             loginForm.addEventListener('submit', async function(e) {
@@ -70,7 +84,9 @@
                 }
             });
 
-            // 哈希生成工具的显示/隐藏
+            // 哈希生成工具的显示/隐藏（需先通过标题彩蛋显示入口）
+            toolToggle.style.display = 'none';
+            toolPanel.style.display = 'none';
             toolToggle.addEventListener('click', function() {
                 toolPanel.style.display = toolPanel.style.display === 'none' ? 'block' : 'none';
             });
@@ -121,6 +137,8 @@
             letter-spacing: 1px;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
             line-height: 1;
+            cursor: default;
+            user-select: none;
         }
 
         .login-form {
@@ -321,7 +339,7 @@
     <a class="back-link" href="index.html">&larr; index</a>
 
     <div class="login-content">
-        <div class="login-title">Static</div>
+        <div class="login-title" id="login-title">Static</div>
 
         <form class="login-form" id="login-form">
             <div class="form-field">

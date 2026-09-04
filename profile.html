@@ -41,6 +41,7 @@
                     if (data.ok) {
                         nameInput.value = data.name;
                         renderAvatar(data.avatar, data.name);
+                        removeAvatarBtn.style.display = data.avatar ? 'inline' : 'none';
                     } else {
                         nameInput.value = myName;
                         renderAvatar(null, myName);

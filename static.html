@@ -36,6 +36,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // 读取会话（sessionStorage 是登录时存入的，标签页关闭即失效）
             const myId = sessionStorage.getItem('static_id');
+            const myName = sessionStorage.getItem('static_name') || myId;
             const myToken = sessionStorage.getItem('static_token');
             const myHash = sessionStorage.getItem('static_hash');
 
@@ -45,7 +46,9 @@
                 return;
             }
 
-            // 欢迎语不再显示名字，只保留「欢迎回来」
+            // 左上角显示自己的身份
+            document.getElementById('me-name').textContent = myName;
+            document.getElementById('me-id').textContent = '@' + myId;
 
             // 码表数据：当前阶段直接内置（就是你们俩）
             const contacts = [
@@ -235,6 +238,27 @@
             opacity: 0.7;
         }
 
+        .me-info {
+            position: fixed;
+            top: 44px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            z-index: 1000;
+        }
+
+        .me-name {
+            font-size: 15px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .me-id {
+            font-size: 12px;
+            color: #888888;
+        }
+
         .footer {
             text-align: center;
             padding: 20px;
@@ -263,6 +287,19 @@
                 font-size: 11px;
             }
 
+            .me-info {
+                top: 34px;
+                left: 12px;
+            }
+
+            .me-name {
+                font-size: 14px;
+            }
+
+            .me-id {
+                font-size: 11px;
+            }
+
             .copyright {
                 font-size: 12px;
             }
@@ -271,6 +308,11 @@
 </head>
 <body>
     <a class="back-link" href="index.html">&larr; index</a>
+
+    <div class="me-info">
+        <div class="me-name" id="me-name"></div>
+        <div class="me-id" id="me-id"></div>
+    </div>
 
     <div class="static-content">
         <div class="static-title">Static</div>

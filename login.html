@@ -43,6 +43,41 @@
                 }
             });
 
+            // 自动登录：本设备登录过（localStorage 存有 ID + 密码哈希）则静默登录
+            // 只存哈希不存明文密码；退出登录会清除记忆
+            (async function autoLogin() {
+                let rid = null, rhash = null;
+                try {
+                    rid = localStorage.getItem('static_remember_id');
+                    rhash = localStorage.getItem('static_remember_hash');
+                } catch (e) { return; }
+                if (!rid || !rhash) return;
+
+                try {
+                    const res = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: rid, hash: rhash })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        try {
+                            sessionStorage.setItem('static_id', rid);
+                            sessionStorage.setItem('static_name', data.name || ('@' + rid));
+                            sessionStorage.setItem('static_token', data.token || '');
+                            sessionStorage.setItem('static_hash', rhash);
+                        } catch (e) {}
+                        window.location.href = 'static.html';
+                    } else {
+                        // 记住的凭证已失效（如密码被修改），清除后回到手动登录
+                        try {
+                            localStorage.removeItem('static_remember_id');
+                            localStorage.removeItem('static_remember_hash');
+                        } catch (e) {}
+                    }
+                } catch (e) { /* 网络异常则留在登录页手动登录 */ }
+            })();
+
             // 登录
             loginForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -75,6 +110,9 @@
                             sessionStorage.setItem('static_name', data.name || ('@' + id));
                             sessionStorage.setItem('static_token', data.token || '');
                             sessionStorage.setItem('static_hash', hash);
+                            // 记住这台设备（下次访问静默自动登录）
+                            localStorage.setItem('static_remember_id', id);
+                            localStorage.setItem('static_remember_hash', hash);
                         } catch (e) { /* 隐私模式下存不进去，聊天功能将不可用 */ }
                         window.location.href = 'static.html';
                     } else {

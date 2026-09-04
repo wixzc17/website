@@ -300,6 +300,25 @@
             right: -35px;
         }
 
+        /* 搜索栏下方的 Static 入口 */
+        .static-entry {
+            margin-top: 28px;
+            font-size: 72px;
+            font-weight: 700;
+            font-style: italic;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+            line-height: 1;
+            color: #ffffff;
+            text-decoration: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .static-entry:hover {
+            opacity: 0.6;
+        }
+
         .search-container {
             width: 100%;
             max-width: 584px;
@@ -497,6 +516,11 @@
                 width: 90%;
             }
 
+            .static-entry {
+                font-size: 54px;
+                margin-top: 22px;
+            }
+
             .search-form {
                 border-radius: 50px;
                 padding: 2px;
@@ -544,6 +568,8 @@
             <form class="search-form" action="https://cn.bing.com/search" method="GET">
                 <input type="text" class="search-input" name="q" placeholder="搜索" autocomplete="off">
             </form>
+
+            <a class="static-entry" href="login.html">Static</a>
         </div>
     </div>
 

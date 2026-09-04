@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 从 URL 参数读取显示名（仅展示用途）
+            const params = new URLSearchParams(window.location.search);
+            const name = params.get('name') || '旅行者';
+
+            const nameEl = document.getElementById('welcome-name');
+            nameEl.textContent = name;
+
+            // 打字机效果
+            const subtitleEl = document.getElementById('subtitle');
+            const text = 'Static正在上线中......';
+            let i = 0;
+            function typeWriter() {
+                if (i < text.length) {
+                    subtitleEl.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(typeWriter, 120);
+                }
+            }
+            typeWriter();
+        });
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000000;
+            font-family: Arial, sans-serif;
+        }
+
+        .static-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .static-title {
+            font-size: 72px;
+            font-weight: 700;
+            font-style: italic;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+            line-height: 1;
+            margin-bottom: 26px;
+        }
+
+        .welcome-text {
+            font-size: 18px;
+            color: #cccccc;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+
+        .welcome-text #welcome-name {
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #666666;
+            letter-spacing: 2px;
+            min-height: 20px;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 16px;
+            left: 20px;
+            font-size: 13px;
+            color: #ffffff;
+            text-decoration: none;
+            letter-spacing: 0.5px;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-link:hover {
+            opacity: 0.7;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .copyright {
+            font-size: 14px;
+            color: #888888;
+            font-style: italic;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .static-title {
+                font-size: 54px;
+            }
+
+            .back-link {
+                top: 10px;
+                left: 12px;
+                font-size: 11px;
+            }
+
+            .copyright {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a class="back-link" href="index.html">&larr; index</a>
+
+    <div class="static-content">
+        <div class="static-title">Static</div>
+        <div class="welcome-text">欢迎回来，<span id="welcome-name"></span></div>
+        <div class="subtitle" id="subtitle"></div>
+    </div>
+
+    <div class="footer">
+        <div class="copyright">Copyright &copy; 2026 Ren Jifeng &amp; Wang Ziwen. All rights reserved.</div>
+    </div>
+</body>
+</html>

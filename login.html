@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static 登录</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script>
+        // SHA-256 纯前端实现（用于生成密码哈希，方便用户在本地算好再填入 Vercel 环境变量）
+        async function sha256(text) {
+            const data = new TextEncoder().encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hashBuffer))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('login-form');
+            const idInput = document.getElementById('id-input');
+            const passwordInput = document.getElementById('password-input');
+            const loginError = document.getElementById('login-error');
+            const loginBtn = document.getElementById('login-btn');
+
+            // 哈希生成工具的元素
+            const toolToggle = document.getElementById('tool-toggle');
+            const toolPanel = document.getElementById('tool-panel');
+            const toolPassword = document.getElementById('tool-password');
+            const toolBtn = document.getElementById('tool-btn');
+            const toolResult = document.getElementById('tool-result');
+
+            // 登录
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                loginError.textContent = '';
+
+                const id = idInput.value.trim().replace(/^@/, '');
+                const password = passwordInput.value;
+
+                if (!id || !password) {
+                    loginError.textContent = '请输入 ID 和密码';
+                    return;
+                }
+
+                loginBtn.disabled = true;
+                loginBtn.textContent = '验证中...';
+
+                try {
+                    const hash = await sha256(password);
+                    const res = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: id, hash: hash })
+                    });
+                    const data = await res.json();
+
+                    if (data.ok) {
+                        // 携带显示名跳转（仅展示用途，不是安全凭证）
+                        const name = encodeURIComponent(data.name || ('@' + id));
+                        window.location.href = 'static.html?name=' + name;
+                    } else {
+                        loginError.textContent = data.message || 'ID 或密码不正确';
+                        loginBtn.disabled = false;
+                        loginBtn.textContent = '登录';
+                    }
+                } catch (err) {
+                    loginError.textContent = '网络异常，请稍后再试';
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = '登录';
+                }
+            });
+
+            // 哈希生成工具的显示/隐藏
+            toolToggle.addEventListener('click', function() {
+                toolPanel.style.display = toolPanel.style.display === 'none' ? 'block' : 'none';
+            });
+
+            // 生成哈希
+            toolBtn.addEventListener('click', async function() {
+                const pwd = toolPassword.value;
+                if (!pwd) {
+                    toolResult.textContent = '请先输入密码';
+                    return;
+                }
+                const hash = await sha256(pwd);
+                toolResult.textContent = hash;
+            });
+        });
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000000;
+            font-family: Arial, sans-serif;
+        }
+
+        .login-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-title {
+            font-size: 40px;
+            font-weight: 700;
+            font-style: italic;
+            margin-bottom: 40px;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+            line-height: 1;
+        }
+
+        .login-form {
+            width: 100%;
+            max-width: 360px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-field {
+            margin-bottom: 18px;
+        }
+
+        .form-field label {
+            display: block;
+            font-size: 12px;
+            color: #888888;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .form-field input {
+            width: 100%;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 15px;
+            background: #000000;
+            color: #ffffff;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-field input:focus {
+            border-color: #ffffff;
+        }
+
+        .form-field input::placeholder {
+            color: #444444;
+        }
+
+        .login-btn {
+            width: 100%;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 15px;
+            background: #000000;
+            color: #ffffff;
+            cursor: pointer;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            margin-top: 6px;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .login-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            min-height: 20px;
+            font-size: 13px;
+            color: #aa6666;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .tool-section {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .tool-toggle {
+            font-size: 12px;
+            color: #666666;
+            cursor: pointer;
+            letter-spacing: 1px;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .tool-toggle:hover {
+            color: #ffffff;
+        }
+
+        .tool-panel {
+            display: none;
+            margin-top: 14px;
+            padding: 16px;
+            border: 1px solid #262626;
+            border-radius: 8px;
+        }
+
+        .tool-panel p {
+            font-size: 12px;
+            color: #888888;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .tool-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tool-row input {
+            flex: 1;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            background: #000000;
+            color: #ffffff;
+            outline: none;
+        }
+
+        .tool-row button {
+            border: 1px solid #404040;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 13px;
+            background: #000000;
+            color: #ffffff;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .tool-row button:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .tool-result {
+            margin-top: 12px;
+            font-size: 11px;
+            color: #888888;
+            word-break: break-all;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            line-height: 1.5;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 16px;
+            left: 20px;
+            font-size: 13px;
+            color: #ffffff;
+            text-decoration: none;
+            letter-spacing: 0.5px;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-link:hover {
+            opacity: 0.7;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .copyright {
+            font-size: 14px;
+            color: #888888;
+            font-style: italic;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .login-title {
+                font-size: 32px;
+                margin-bottom: 30px;
+            }
+
+            .back-link {
+                top: 10px;
+                left: 12px;
+                font-size: 11px;
+            }
+
+            .copyright {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a class="back-link" href="index.html">&larr; index</a>
+
+    <div class="login-content">
+        <div class="login-title">Static</div>
+
+        <form class="login-form" id="login-form">
+            <div class="form-field">
+                <label for="id-input">ID</label>
+                <input type="text" id="id-input" placeholder="@your_id" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </div>
+
+            <div class="form-field">
+                <label for="password-input">密码</label>
+                <input type="password" id="password-input" placeholder="••••••••" autocomplete="off">
+            </div>
+
+            <button type="submit" class="login-btn" id="login-btn">登录</button>
+
+            <div class="login-error" id="login-error"></div>
+        </form>
+
+        <div class="tool-section">
+            <button type="button" class="tool-toggle" id="tool-toggle">首次使用？生成密码哈希 &gt;</button>
+            <div class="tool-panel" id="tool-panel">
+                <p>输入你想设置的密码，点击生成。把得到的哈希值按说明填入 Vercel 环境变量 STATIC_USERS，即可完成账号注册。密码明文不会被发送到任何地方。</p>
+                <div class="tool-row">
+                    <input type="password" id="tool-password" placeholder="想设置的密码">
+                    <button type="button" id="tool-btn">生成哈希</button>
+                </div>
+                <div class="tool-result" id="tool-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="copyright">Copyright &copy; 2026 Ren Jifeng &amp; Wang Ziwen. All rights reserved.</div>
+    </div>
+</body>
+</html>

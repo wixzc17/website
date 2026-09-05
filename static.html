@@ -213,6 +213,9 @@
             flex-direction: column;
             align-items: center;
             padding: 150px 20px 30px;
+            overflow-y: auto;          /* 联系人多时可滚动，滚动只发生在内容区内部 */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
 
         .search-bar {

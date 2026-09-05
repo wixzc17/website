@@ -46,6 +46,8 @@ export default async function handler(request, response) {
         if (!process.env.ZHIPU_API_KEY) {
             return response.status(500).json({ ok: false, message: 'AI 服务未配置' });
         }
+        // 防御：粘贴时可能带入空白字符，统一去掉
+        const apiKey = process.env.ZHIPU_API_KEY.trim();
 
         // 校验消息数组格式，限制长度防滥用
         const msgs = body && body.messages;
@@ -69,7 +71,7 @@ export default async function handler(request, response) {
         const res = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': 'Bearer ' + process.env.ZHIPU_API_KEY,
+                'Authorization': 'Bearer ' + apiKey,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({

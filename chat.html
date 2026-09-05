@@ -64,12 +64,10 @@
                 } catch (e) {}
             }
 
-            // 拉取对方最新资料（改名/换头像后同步到顶部名字）
-            loadProfile(peerId).then(() => {
-                const p = profiles[peerId];
-                if (p) document.getElementById('peer-name').textContent = p.name;
-            });
-            loadProfile(myId); // 自己的头像（消息区用）
+            // 先拉齐双方资料再渲染消息（否则头像竞态会回退显示「@」）
+            await Promise.all([loadProfile(peerId), loadProfile(myId)]);
+            const peerP = profiles[peerId];
+            if (peerP) document.getElementById('peer-name').textContent = peerP.name;
 
             // 加密密钥（两人ID + 密码哈希派生）
             const key = await StaticCrypto.deriveKey(myId, peerId, myHash);
@@ -84,7 +82,7 @@
             let polling = null;
 
             // ---------- 消息渲染 ----------
-            // 头像规则：连续发言只有第一条带头像，发言权交接时重新出现
+            // 每条消息：头像（我右他左）+ 文字 + 时间，底部白线分隔（码表风格）
             function makeAvatarEl(senderId) {
                 const el = document.createElement('div');
                 el.className = 'msg-avatar';
@@ -104,46 +102,41 @@
                 rendered = fingerprint;
 
                 messagesEl.innerHTML = '';
-                let prevFrom = null;
                 messages.forEach(m => {
                     const isMine = m.from === myId;
                     const row = document.createElement('div');
-                    row.className = 'bubble-row ' + (isMine ? 'mine' : 'theirs');
+                    row.className = 'msg-row ' + (isMine ? 'mine' : 'theirs');
 
-                    // 头像：只在本轮发言的第一条显示
-                    if (m.from !== prevFrom) {
-                        row.appendChild(makeAvatarEl(m.from));
-                    }
+                    // 每条消息都带头像
+                    row.appendChild(makeAvatarEl(m.from));
 
                     const col = document.createElement('div');
-                    col.className = 'bubble-col';
+                    col.className = 'msg-col';
 
-                    const bubbleInner = document.createElement('div');
-                    bubbleInner.className = 'bubble';
+                    const textEl = document.createElement('div');
+                    textEl.className = 'msg-text';
 
                     // 解密（异步，但不改变 DOM 顺序）
                     StaticCrypto.decrypt(key, m.ct).then(text => {
                         if (text === null) {
-                            bubbleInner.textContent = '[无法解密的消息]';
-                            bubbleInner.classList.add('undecryptable');
+                            textEl.textContent = '[无法解密的消息]';
+                            textEl.classList.add('undecryptable');
                         } else {
-                            bubbleInner.textContent = text;
+                            textEl.textContent = text;
                         }
                     });
 
-                    // 时间戳
+                    // 时间戳：月/日 时:分
                     const timeEl = document.createElement('div');
-                    timeEl.className = 'bubble-time';
+                    timeEl.className = 'msg-time';
                     const d = new Date(m.ts);
                     timeEl.textContent = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
                         String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
-                    col.appendChild(bubbleInner);
+                    col.appendChild(textEl);
                     col.appendChild(timeEl);
                     row.appendChild(col);
                     messagesEl.appendChild(row);
-
-                    prevFrom = m.from;
                 });
 
                 // 滚到底部
@@ -265,41 +258,38 @@
         .messages {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 8px 16px 16px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
         }
 
-        .bubble-row {
+        /* 消息条目：码表风格——每条一头像+文字+时间，底部白线 */
+        .msg-row {
             display: flex;
             align-items: flex-start;
-            max-width: 78%;
+            width: 100%;
+            padding: 12px 0;
+            border-bottom: 1px solid #ffffff;
         }
 
-        .bubble-row.mine {
-            align-self: flex-end;
+        .msg-row.mine {
             flex-direction: row-reverse; /* 头像贴右 */
         }
 
-        .bubble-row.theirs {
-            align-self: flex-start;
-        }
-
-        .bubble-col {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .bubble-row.mine .bubble-col {
+        .msg-row.mine .msg-col {
             align-items: flex-end;
         }
 
-        .bubble-row.theirs .bubble-col {
+        .msg-row.theirs .msg-col {
             align-items: flex-start;
         }
 
-        /* 消息区头像：只出现在每轮发言的第一条 */
+        .msg-col {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
         .msg-avatar {
             width: 32px;
             height: 32px;
@@ -315,39 +305,25 @@
             background-size: cover;
             background-position: center;
             flex-shrink: 0;
-            margin: 0 8px;
+            margin: 0 10px;
         }
 
-        .bubble {
-            padding: 10px 14px;
-            border-radius: 14px;
+        .msg-text {
             font-size: 14px;
             line-height: 1.5;
             word-break: break-word;
             white-space: pre-wrap;
-        }
-
-        .mine .bubble {
-            background: #ffffff;
-            color: #000000;
-            border-bottom-right-radius: 4px;
-        }
-
-        .theirs .bubble {
-            background: #111111;
             color: #ffffff;
-            border: 1px solid #333333;
-            border-bottom-left-radius: 4px;
         }
 
-        .bubble.undecryptable {
+        .msg-text.undecryptable {
             color: #aa6666;
             font-style: italic;
         }
 
-        .bubble-time {
+        .msg-time {
             font-size: 10px;
-            color: #555555;
+            color: #888888;
             margin-top: 4px;
         }
 

@@ -386,20 +386,37 @@
         }
 
         .send-btn {
+            width: 42px;
+            height: 42px;
             border: 1px solid #404040;
-            border-radius: 20px;
-            padding: 10px 20px;
-            font-size: 14px;
+            border-radius: 50%;
             background: #000000;
-            color: #ffffff;
             cursor: pointer;
-            white-space: nowrap;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.3s ease;
+        }
+
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+            stroke: #ffffff;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            transition: stroke 0.3s ease;
         }
 
         .send-btn:hover:not(:disabled) {
             background: #ffffff;
-            color: #000000;
+        }
+
+        .send-btn:hover:not(:disabled) svg {
+            stroke: #000000;
         }
 
         .send-btn:disabled {
@@ -437,7 +454,11 @@
 
     <div class="chat-input-bar">
         <input type="text" class="msg-input" id="msg-input" placeholder="" autocomplete="off" maxlength="2000">
-        <button class="send-btn" id="send-btn">发送</button>
+        <button class="send-btn" id="send-btn" title="发送" aria-label="发送">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 19 L12 5 M5 12 L12 5 L19 12"/>
+            </svg>
+        </button>
     </div>
 
 </body>

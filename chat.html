@@ -360,6 +360,7 @@
             const prismSendBtn = document.getElementById('prism-send');
             const prismStatus = document.getElementById('prism-status');
             document.getElementById('prism-head-icon').innerHTML = PRISM_SVG;
+            document.getElementById('model-lock').innerHTML = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
             // 对话历史存 sessionStorage（与码表页的 prism 历史分开存）
             const PRISM_KEY = 'prism_history_' + myId;
@@ -928,6 +929,28 @@
             color: #666666;
         }
 
+        /* 模型名标签（锁=当前唯一模型，以后多模型换箭头） */
+        .model-tag {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 16px;
+            font-size: 11px;
+            color: #666666;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            flex-shrink: 0;
+        }
+
+        .model-tag svg {
+            width: 11px;
+            height: 11px;
+            stroke: #666666;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
         .prism-close {
             margin-left: auto;
             background: none;
@@ -1219,8 +1242,11 @@
         <div class="prism-head">
             <div class="prism-head-icon" id="prism-head-icon"></div>
             <div class="prism-head-text">
-                <div class="prism-head-name">prism</div>
-                <div class="prism-head-id">prism</div>
+                <div class="prism-head-name">棱镜</div>
+                <div class="prism-head-id">Prism</div>
+            </div>
+            <div class="model-tag" title="当前唯一可用模型">
+                <span id="model-lock"></span>GLM-4.7-Flash
             </div>
             <button class="prism-close" id="prism-close" type="button">&times;</button>
         </div>

@@ -9,6 +9,16 @@
 
 import crypto from 'crypto';
 
+// 模型的基础设定（服务端写死，前端无法覆盖）
+// 每次请求自动插到对话最前面，模型由此知道自己是谁、在哪、该干什么
+const BASE_SYSTEM_PROMPT = [
+    '你是 Static 的内置 AI 助手。',
+    'Static 是一个极简风格的私人网站（wangwang-momo.cn），黑白配色，',
+    '由汪子雯（@wixzc17）和任继锋（@lixs17）两人使用，具备加密私聊、推文广场等功能。',
+    '你未来的任务包括：日常对话、分析推文广场的内容、分析聊天上下文等。',
+    '回复风格：简洁、自然、中文为主。不确定的事就说不确定，不要编造。'
+].join('\n');
+
 export default async function handler(request, response) {
     if (request.method !== 'POST') {
         return response.status(405).json({ ok: false, message: '方法不允许' });
@@ -66,6 +76,9 @@ export default async function handler(request, response) {
         if (clean.length === 0) {
             return response.status(400).json({ ok: false, message: '对话内容不合法' });
         }
+
+        // 基础设定永远排最前；前端传来的 system 消息作为场景补充跟在后面
+        clean.unshift({ role: 'system', content: BASE_SYSTEM_PROMPT });
 
         // ---------- 调用智谱 OpenAI 兼容接口 ----------
         const res = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {

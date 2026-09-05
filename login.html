@@ -81,14 +81,18 @@
             // ---------- 注册 / 登录切换 ----------
             const registerToggle = document.getElementById('register-toggle');
             const nameField = document.getElementById('name-field');
+            const inviteField = document.getElementById('invite-field');
             const confirmField = document.getElementById('confirm-field');
+            const inviteHint = document.getElementById('invite-hint');
             const loginBtn2 = document.getElementById('login-btn');
             let isRegister = false;
 
             function setMode(register) {
                 isRegister = register;
                 nameField.style.display = register ? 'block' : 'none';
+                inviteField.style.display = register ? 'block' : 'none';
                 confirmField.style.display = register ? 'block' : 'none';
+                inviteHint.style.display = register ? 'block' : 'none';
                 loginBtn2.textContent = register ? '注册' : '登录';
                 registerToggle.textContent = register ? '已有账号？登录' : '没有账号？注册';
                 loginError.textContent = '';
@@ -118,9 +122,10 @@
                     const hash = await sha256(password);
 
                     if (isRegister) {
-                        // 注册：先走注册接口
+                        // 注册：先走注册接口（需邀请码）
                         const name = document.getElementById('name-input').value.trim();
                         const confirm = document.getElementById('confirm-input').value;
+                        const invite = document.getElementById('invite-input').value.trim();
                         if (password !== confirm) {
                             loginError.textContent = '两次输入的密码不一致';
                             loginBtn2.disabled = false;
@@ -130,7 +135,7 @@
                         const regRes = await fetch('/api/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: id, hash: hash, name: name })
+                            body: JSON.stringify({ id: id, hash: hash, name: name, invite: invite })
                         });
                         const regData = await regRes.json();
                         if (!regData.ok) {
@@ -318,6 +323,17 @@
             color: #ffffff;
         }
 
+        .invite-hint {
+            width: 100%;
+            max-width: 360px;
+            margin-top: 18px;
+            font-size: 12px;
+            color: #666666;
+            line-height: 1.8;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
         .tool-section {
             margin-top: 30px;
             width: 100%;
@@ -458,6 +474,11 @@
                 <input type="text" id="name-input" placeholder="" autocomplete="off" maxlength="16">
             </div>
 
+            <div class="form-field" id="invite-field" style="display:none">
+                <label for="invite-input">邀请码</label>
+                <input type="text" id="invite-input" placeholder="" autocomplete="off" inputmode="numeric" maxlength="6">
+            </div>
+
             <div class="form-field">
                 <label for="password-input">密码</label>
                 <input type="password" id="password-input" placeholder="••••••••" autocomplete="off">
@@ -472,6 +493,12 @@
 
             <div class="login-error" id="login-error"></div>
         </form>
+
+        <div class="invite-hint" id="invite-hint" style="display:none">
+            本站采用邀请制注册。想要邀请码，请联系：<br>
+            任继锋 1518629477@qq.com<br>
+            汪子雯 2425731355@qq.com
+        </div>
 
         <button type="button" class="register-toggle" id="register-toggle">没有账号？注册</button>
 

@@ -1,10 +1,11 @@
 // Static 注册接口
 // 注册账号存在 Cloudflare KV（区别于环境变量 STATIC_USERS 里的初始硬编码账号）
 //
-// POST /api/register  { id, hash, name? }
-//   id:   2-20 位字母数字
-//   hash: 密码的 SHA-256（64 位十六进制，前端算好，明文密码永不上传）
-//   name: 可选显示名（≤16 字符，默认 @id）
+// POST /api/register  { id, hash, name?, invite }
+//   id:      2-20 位字母数字
+//   hash:    密码的 SHA-256（64 位十六进制，前端算好，明文密码永不上传）
+//   name:    可选显示名（≤16 字符，默认 @id）
+//   invite:  注册邀请码（服务端硬编码校验）
 //
 // KV 结构：
 //   user:<id>       → { hash, name, ts }
@@ -22,13 +23,18 @@ export default async function handler(request, response) {
     };
 
     const MAX_USERS = 100;
+    const INVITE_CODE = '200512'; // 注册邀请码（想加入请联系站长）
 
     try {
         const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body;
         const id = (body && body.id || '').toString().trim().replace(/^@/, '');
         const hash = (body && body.hash || '').toString().toLowerCase();
         const name = (body && body.name || '').toString().trim();
+        const invite = (body && body.invite || '').toString().trim();
 
+        if (invite !== INVITE_CODE) {
+            return response.status(400).json({ ok: false, message: '邀请码不正确' });
+        }
         if (!/^[a-zA-Z0-9]{2,20}$/.test(id)) {
             return response.status(400).json({ ok: false, message: 'ID 需为 2-20 位字母或数字' });
         }

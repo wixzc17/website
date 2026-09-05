@@ -97,7 +97,8 @@ export default async function handler(request, response) {
         const allIds = staticIds.concat(registry);
 
         // 搜索模式：按 ID / 昵称模糊匹配，返回 { id, name } 列表（供「添加好友」用户池用）
-        const q = (url.searchParams.get('q') || '').toString().trim().toLowerCase();
+        // 去掉开头 @，让「@lixs17」也能命中 id「lixs17」（与登录/注册一致）
+        const q = (url.searchParams.get('q') || '').toString().trim().toLowerCase().replace(/^@/, '');
         if (q) {
             const resolved = await Promise.all(allIds.map(async id => ({ id: id, name: await resolveName(id) })));
             const users = resolved.filter(u => u.id.toLowerCase().includes(q) || u.name.toLowerCase().includes(q));

@@ -102,10 +102,16 @@
                 rendered = fingerprint;
 
                 messagesEl.innerHTML = '';
-                messages.forEach(m => {
+                messages.forEach((m, idx) => {
                     const isMine = m.from === myId;
                     const row = document.createElement('div');
                     row.className = 'msg-row ' + (isMine ? 'mine' : 'theirs');
+
+                    // 连续消息：去白线，头像下挂灰色竖线连到下一条
+                    const next = messages[idx + 1];
+                    if (next && next.from === m.from) {
+                        row.classList.add('continued');
+                    }
 
                     // 每条消息都带头像
                     row.appendChild(makeAvatarEl(m.from));
@@ -271,6 +277,34 @@
             width: 100%;
             padding: 12px 0;
             border-bottom: 1px solid #ffffff;
+        }
+
+        /* 连续消息：无白线，头像下垂灰竖线连到下一条（X 式会话线） */
+        .msg-row.continued {
+            border-bottom: none;
+            padding-bottom: 0;
+            position: relative;
+        }
+
+        .msg-row.continued + .msg-row {
+            padding-top: 8px;
+        }
+
+        .msg-row.continued::after {
+            content: '';
+            position: absolute;
+            top: 44px; /* 头像（32px）底部再往下一点 */
+            bottom: -8px; /* 延伸进下一条消息的 padding-top，衔接下一个头像 */
+            width: 1px;
+            background: #404040;
+        }
+
+        .msg-row.continued.theirs::after {
+            left: 26px; /* 左侧头像中心（10px margin + 16px 半宽） */
+        }
+
+        .msg-row.continued.mine::after {
+            right: 26px;
         }
 
         .msg-row.mine {

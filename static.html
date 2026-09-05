@@ -548,6 +548,10 @@
             pointer-events: none;
         }
 
+        .bar-empty svg {
+            opacity: 0.5;
+        }
+
         /* 分隔竖线：短于底栏高度，居中 */
         .bar-empty::before {
             content: '';
@@ -641,7 +645,15 @@
                 <path d="M4 4h16v12H8l-4 4z"/>
             </svg>
         </a>
-        <div class="bar-tab bar-empty"></div>
+        <div class="bar-tab bar-empty">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M16.24 7.76a6 6 0 0 1 0 8.49"/>
+                <path d="M7.76 16.24a6 6 0 0 1 0-8.49"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                <path d="M4.93 19.07a10 10 0 0 1 0-14.14"/>
+                <path d="M12 9.5l1.2 2.3 2.3 1.2-2.3 1.2-1.2 2.3-1.2-2.3-2.3-1.2 2.3-1.2z"/>
+            </svg>
+        </div>
     </div>
 </body>
 </html>

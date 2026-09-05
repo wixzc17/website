@@ -1,7 +1,9 @@
-// Static 用户列表接口（token 鉴权）
-// 码表联系人列表数据源：初始硬编码账号 + KV 注册账号
+// Static 用户列表 / 搜索接口（token 鉴权）
+// 「添加好友」的用户池：初始硬编码账号 + KV 注册账号
+// 注意：码表联系人不从这里取，改由 /api/contacts 返回各自的通讯录
 //
-// GET /api/users?token=xxx  → { ok, ids: [id, ...] }
+// GET /api/users?token=xxx           → { ok, ids: [id, ...] }（全量，向后兼容）
+// GET /api/users?token=xxx&q=关键字  → { ok, users: [{id, name}, ...] }（模糊搜索）
 
 import crypto from 'crypto';
 
@@ -30,6 +32,23 @@ export default async function handler(request, response) {
             }
         } catch (e) {}
         return null;
+    }
+
+    // 解析用户显示名：STATIC_USERS 优先，KV 注册账号兜底，默认 @id
+    async function resolveName(id) {
+        let users = {};
+        try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) {}
+        if (users[id] && users[id].name) return users[id].name;
+        try {
+            const res = await fetch(KV_URL + encodeURIComponent('user:' + id), {
+                headers: KV_HEADERS
+            });
+            if (res.ok) {
+                const acct = await res.json();
+                if (acct && typeof acct.name === 'string' && acct.name) return acct.name;
+            }
+        } catch (e) {}
+        return '@' + id;
     }
 
     async function parseToken(token) {
@@ -75,7 +94,17 @@ export default async function handler(request, response) {
             }
         } catch (e) {}
 
-        return response.status(200).json({ ok: true, ids: staticIds.concat(registry) });
+        const allIds = staticIds.concat(registry);
+
+        // 搜索模式：按 ID / 昵称模糊匹配，返回 { id, name } 列表（供「添加好友」用户池用）
+        const q = (url.searchParams.get('q') || '').toString().trim().toLowerCase();
+        if (q) {
+            const resolved = await Promise.all(allIds.map(async id => ({ id: id, name: await resolveName(id) })));
+            const users = resolved.filter(u => u.id.toLowerCase().includes(q) || u.name.toLowerCase().includes(q));
+            return response.status(200).json({ ok: true, users: users });
+        }
+
+        return response.status(200).json({ ok: true, ids: allIds });
     } catch (e) {
         console.error('users handler error:', e.message);
         return response.status(500).json({ ok: false, message: '服务器内部错误' });

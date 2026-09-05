@@ -84,7 +84,8 @@ export default async function handler(request, response) {
         if (!res.ok) {
             const errText = await res.text().catch(() => '');
             console.error('zhipu api error:', res.status, errText.slice(0, 500));
-            return response.status(502).json({ ok: false, message: 'AI 服务暂时不可用' });
+            // 临时调试：带上游真实错误，定位后移除
+            return response.status(502).json({ ok: false, message: 'AI 服务暂时不可用', debug: res.status + ' ' + errText.slice(0, 300) });
         }
 
         const data = await res.json();

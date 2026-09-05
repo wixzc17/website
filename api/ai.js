@@ -86,8 +86,11 @@ export default async function handler(request, response) {
         if (!res.ok) {
             const errText = await res.text().catch(() => '');
             console.error('zhipu api error:', res.status, errText.slice(0, 500));
-            // 临时调试：带上游真实错误，定位后移除
-            return response.status(502).json({ ok: false, message: 'AI 服务暂时不可用', debug: res.status + ' ' + errText.slice(0, 300) });
+            // 429 = 上游模型繁忙，提示用户稍后重试；其他错误笼统提示
+            if (res.status === 429) {
+                return response.status(200).json({ ok: false, message: 'AI 正忙，请稍后再试' });
+            }
+            return response.status(502).json({ ok: false, message: 'AI 服务暂时不可用' });
         }
 
         const data = await res.json();

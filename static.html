@@ -143,6 +143,16 @@
                 } catch (e) {}
                 window.location.href = 'index.html';
             });
+            // 侧边栏里的退出登录（同一个逻辑，点完先收起侧边栏）
+            document.getElementById('logout-sidebar-btn').addEventListener('click', function() {
+                closeSidebar();
+                sessionStorage.clear();
+                try {
+                    localStorage.removeItem('static_remember_id');
+                    localStorage.removeItem('static_remember_hash');
+                } catch (e) {}
+                window.location.href = 'index.html';
+            });
         });
     </script>
     <style>
@@ -263,22 +273,13 @@
             letter-spacing: 0.5px;
         }
 
-        .logout-btn {
-            margin-top: 36px;
-            font-size: 12px;
-            color: #666666;
+        .sidebar-logout {
+            margin-top: auto;
             background: none;
-            border: 1px solid #262626;
-            border-radius: 8px;
-            padding: 8px 22px;
-            cursor: pointer;
-            letter-spacing: 2px;
-            transition: all 0.3s ease;
-        }
-
-        .logout-btn:hover {
-            color: #ffffff;
-            border-color: #555555;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
         }
 
         .back-link {
@@ -482,6 +483,7 @@
     <div class="sidebar" id="sidebar">
         <button class="sidebar-close" id="sidebar-close" type="button">&times;</button>
         <a class="sidebar-item" href="profile.html">个人资料</a>
+        <button class="sidebar-item sidebar-logout" id="logout-sidebar-btn" type="button">退出登录</button>
     </div>
 
     <div class="static-content">
@@ -490,8 +492,6 @@
             <div class="static-title">Static</div>
         </div>
         <div class="contact-list" id="contact-list"></div>
-
-        <button class="logout-btn" id="logout-btn">退出登录</button>
     </div>
 
     <div class="footer">

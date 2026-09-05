@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static · 对话</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script src="/static-crypto.js"></script>
     <script>
         // 共享加密工具（与 static.html 保持一致的派生方式）
         const StaticCrypto = {
@@ -29,6 +30,62 @@
                 } catch (e) { return null; } // 解码或解密失败=格式不对/被篡改/密钥不符
             }
         };
+
+        // 旧算法（v1）：会话密钥由两人 ID + 自己的密码哈希派生
+        // 保留它只为读历史消息，新的消息一律走 v2
+        async function legacyKeyOf(myId, peerId, passwordHash) {
+            const material = [myId, peerId].sort().join('::') + '::' + passwordHash;
+            const raw = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(material)));
+            return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+        }
+
+        // v2：取（没有就建）会话密钥
+        // 任一方还没有身份密钥时返回 null，调用方自动回退旧算法
+        async function establishConvKey(myId, myHash, myToken, peerId) {
+            try {
+                const mineRes = await fetch('/api/keys?mine=1&token=' + encodeURIComponent(myToken));
+                const mine = await mineRes.json();
+                if (!mine.ok || !mine.privEnc) return null;
+
+                const privKey = await StaticKeys.importEncryptedPrivate(mine.privEnc, myHash, myId);
+                if (!privKey) return null;
+
+                // 已有会话密钥：解开属于我的那一份
+                const cur = await (await fetch('/api/keys?conv=' + encodeURIComponent(peerId) + '&token=' + encodeURIComponent(myToken))).json();
+                if (cur.ok && cur.wrapped && cur.wrapped[myId]) {
+                    const raw = await StaticKeys.unwrapSessionKey(cur.wrapped[myId], privKey);
+                    if (raw) return StaticKeys.importSessionKey(raw);
+                }
+
+                // 还没有：生成一把，用双方公钥各封装一份上传
+                const peerRes = await fetch('/api/keys?id=' + encodeURIComponent(peerId) + '&token=' + encodeURIComponent(myToken));
+                const peer = await peerRes.json();
+                if (!peer.ok || !peer.pub || !mine.pub) return null;
+
+                const sessionKey = StaticKeys.generateSessionKey();
+                const wrapped = {};
+                wrapped[myId] = await StaticKeys.wrapSessionKey(sessionKey, mine.pub);
+                wrapped[peerId] = await StaticKeys.wrapSessionKey(sessionKey, peer.pub);
+
+                await fetch('/api/keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: myToken, peer: peerId, wrapped: wrapped })
+                });
+
+                // 重新读一次并采纳服务器上的最终版本：
+                // 双方同时创建时以先写入的为准，避免各用一把导致互相解不开
+                await new Promise(r => setTimeout(r, 500));
+                const fresh = await (await fetch('/api/keys?conv=' + encodeURIComponent(peerId) + '&token=' + encodeURIComponent(myToken))).json();
+                if (fresh.ok && fresh.wrapped && fresh.wrapped[myId]) {
+                    const raw = await StaticKeys.unwrapSessionKey(fresh.wrapped[myId], privKey);
+                    if (raw) return StaticKeys.importSessionKey(raw);
+                }
+                return StaticKeys.importSessionKey(sessionKey);
+            } catch (e) {
+                return null;
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', async function() {
             // 会话信息
@@ -69,8 +126,30 @@
             const peerP = profiles[peerId];
             if (peerP) document.getElementById('peer-name').textContent = peerP.name;
 
-            // 加密密钥（两人ID + 密码哈希派生）
-            const key = await StaticCrypto.deriveKey(myId, peerId, myHash);
+            // 消息密钥：优先 v2 会话密钥（与密码无关）；任一方没有身份密钥时回退旧算法
+            const legacyKey = await legacyKeyOf(myId, peerId, myHash);
+            let convKey = null;    // v2 会话密钥，null = 尚未建立
+            let convTriedAt = 0;   // 节流：轮询时不要每 2 秒都去重试
+
+            async function ensureConvKey() {
+                if (convKey) return convKey;
+                const now = Date.now();
+                if (now - convTriedAt < 15000) return null;
+                convTriedAt = now;
+                convKey = await establishConvKey(myId, myHash, myToken, peerId);
+                return convKey;
+            }
+
+            // 读消息先试新密钥，解不开再试旧密钥（历史消息是旧算法加密的）
+            async function decryptMessage(ct) {
+                if (convKey) {
+                    const text = await StaticKeys.decryptWith(convKey, ct);
+                    if (text !== null) return text;
+                }
+                return StaticKeys.decryptWith(legacyKey, ct);
+            }
+
+            await ensureConvKey();
 
             // ---------- 界面元素 ----------
             const messagesEl = document.getElementById('messages');
@@ -115,7 +194,7 @@
 
                 // 先解密全部再渲染（复制/引用需要明文就绪，也消除头像/文字竞态）
                 const decoded = await Promise.all(messages.map(async m => {
-                    const text = await StaticCrypto.decrypt(key, m.ct);
+                    const text = await decryptMessage(m.ct);
                     return { id: m.id, from: m.from, ts: m.ts, text: text };
                 }));
 
@@ -299,6 +378,7 @@
                     }
                     const data = await res.json();
                     if (data.ok) {
+                        await ensureConvKey(); // 对方可能刚建好会话密钥
                         renderMessages(data.messages);
                         statusEl.textContent = '';
                     }
@@ -320,7 +400,9 @@
 
                 sendBtn.disabled = true;
                 try {
-                    const ciphertext = await StaticCrypto.encrypt(key, plaintext);
+                    // 优先用 v2 会话密钥；还没建立就先用旧算法，不影响发送
+                    const sendKey = (await ensureConvKey()) || legacyKey;
+                    const ciphertext = await StaticKeys.encryptWith(sendKey, plaintext);
                     const res = await fetch('/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },

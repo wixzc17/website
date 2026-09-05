@@ -1,14 +1,19 @@
 // Static 密钥接口（v2 密钥体系）
 //
-// GET  /api/keys?token=xxx&mine=1     读取自己的公钥 + 加密私钥包
-// GET  /api/keys?token=xxx&id=yyy     读取某人的公钥（用于封装会话密钥）
-// POST /api/keys { token, pub, privEnc, rotate? }   上传或更新自己的密钥
+// 身份密钥：
+//   GET  /api/keys?token=xxx&mine=1     读取自己的公钥 + 加密私钥包
+//   GET  /api/keys?token=xxx&id=yyy     读取某人的公钥（用于封装会话密钥）
+//   POST /api/keys { token, pub, privEnc, rotate? }   上传或更新自己的密钥
 //
-// KV 结构：keys:<id> → { pub, privEnc: { iv, ct }, v: 1, ts }
-//   pub      = SPKI 导出的 ECDH 公钥（base64）
-//   privEnc  = 用密码哈希派生的 KEK 加密后的私钥包（服务器解不开）
+// 会话密钥：
+//   GET  /api/keys?token=xxx&conv=yyy   读取我和某人会话里「属于我」的那份封装
+//   POST /api/keys { token, peer, wrapped }   建立会话密钥（已存在则只补缺失成员）
 //
-// 服务器全程只见公钥和密文，拿不到任何一方的私钥
+// KV 结构：
+//   keys:<id>            → { pub, privEnc: { iv, ct }, v: 1, ts }
+//   convkey:dm:<a_b>     → { v: 1, ts, wrapped: { 成员ID: { ephPub, iv, ct } } }
+//
+// 服务器全程只见公钥和密文，拿不到任何一方的私钥，也拿不到会话密钥明文
 
 import crypto from 'crypto';
 
@@ -59,9 +64,10 @@ export default async function handler(request, response) {
         return { id };
     }
 
-    async function readKeys(id) {
+    // 读 KV：undefined = 存储故障，null = 没有这个 key
+    async function readRaw(key) {
         try {
-            const res = await fetch(KV_URL + encodeURIComponent('keys:' + id), {
+            const res = await fetch(KV_URL + encodeURIComponent(key), {
                 headers: { 'Authorization': KV_HEADERS.Authorization }
             });
             if (res.status === 404) return null;
@@ -70,11 +76,34 @@ export default async function handler(request, response) {
             return (data && typeof data === 'object') ? data : null;
         } catch (e) {
             console.error('keys read error:', e.message);
-            return undefined; // undefined = 存储故障，区别于「没有密钥」的 null
+            return undefined;
         }
     }
 
+    async function writeRaw(key, value) {
+        const res = await fetch(KV_URL + encodeURIComponent(key), {
+            method: 'PUT',
+            headers: KV_HEADERS,
+            body: JSON.stringify(value)
+        });
+        if (!res.ok) throw new Error('KV write failed: ' + res.status);
+    }
+
+    // 两人会话的 ID（排序保证双方算出的一样，与 chat.js 的 convoKey 一致）
+    function convIdOf(a, b) {
+        return 'dm:' + [a, b].sort().join('_');
+    }
+
+    // 校验一份封装数据 { ephPub, iv, ct }
+    function validWrapped(w) {
+        return w && typeof w === 'object' &&
+            typeof w.ephPub === 'string' && w.ephPub.length > 0 && w.ephPub.length <= 2048 &&
+            typeof w.iv === 'string' && w.iv.length > 0 && w.iv.length <= 64 &&
+            typeof w.ct === 'string' && w.ct.length > 0 && w.ct.length <= 4096;
+    }
+
     try {
+        // ================= GET =================
         if (request.method === 'GET') {
             const url = new URL(request.url, 'https://x.local');
             const session = await parseToken(url.searchParams.get('token') || '');
@@ -82,6 +111,28 @@ export default async function handler(request, response) {
                 return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
             }
 
+            // ---- 会话密钥：只返回属于当前用户自己的那一份 ----
+            const convPeer = (url.searchParams.get('conv') || '').toString().trim().replace(/^@/, '');
+            if (convPeer) {
+                if (!/^[a-zA-Z0-9]+$/.test(convPeer)) {
+                    return response.status(400).json({ ok: false, message: 'ID 不合法' });
+                }
+                if (!(await findUserHash(convPeer))) {
+                    return response.status(404).json({ ok: false, message: '用户不存在' });
+                }
+                const data = await readRaw('convkey:' + convIdOf(session.id, convPeer));
+                if (data === undefined) {
+                    return response.status(500).json({ ok: false, message: '存储暂时不可用' });
+                }
+                const mine = (data && data.wrapped && data.wrapped[session.id]) || null;
+                return response.status(200).json({
+                    ok: true,
+                    convId: convIdOf(session.id, convPeer),
+                    wrapped: mine ? { [session.id]: mine } : {}
+                });
+            }
+
+            // ---- 身份密钥 ----
             const mine = url.searchParams.get('mine') === '1';
             const target = mine
                 ? session.id
@@ -97,7 +148,7 @@ export default async function handler(request, response) {
                 }
             }
 
-            const keys = await readKeys(target);
+            const keys = await readRaw('keys:' + target);
             if (keys === undefined) {
                 return response.status(500).json({ ok: false, message: '存储暂时不可用' });
             }
@@ -112,13 +163,74 @@ export default async function handler(request, response) {
             });
         }
 
-        // ---------- POST：上传/更新自己的密钥 ----------
+        // ================= POST =================
         const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body;
         const session = await parseToken(body && body.token);
         if (!session) {
             return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
         }
 
+        // ---- 会话密钥：建立 / 补齐成员 ----
+        const convPeer = (body && body.peer || '').toString().trim().replace(/^@/, '');
+        if (convPeer) {
+            if (!/^[a-zA-Z0-9]+$/.test(convPeer) || convPeer === session.id) {
+                return response.status(400).json({ ok: false, message: '会话参数不合法' });
+            }
+            if (!(await findUserHash(convPeer))) {
+                return response.status(404).json({ ok: false, message: '用户不存在' });
+            }
+
+            const wrapped = body && body.wrapped;
+            if (!wrapped || typeof wrapped !== 'object') {
+                return response.status(400).json({ ok: false, message: '封装数据不合法' });
+            }
+            // 只允许写自己和对方两个成员，且每人一份合法封装
+            const allowed = { [session.id]: true, [convPeer]: true };
+            const entries = Object.keys(wrapped);
+            if (entries.length === 0 || entries.length > 2) {
+                return response.status(400).json({ ok: false, message: '成员数量不合法' });
+            }
+            for (const member of entries) {
+                if (!allowed[member] || !validWrapped(wrapped[member])) {
+                    return response.status(400).json({ ok: false, message: '封装数据不合法' });
+                }
+            }
+
+            const convKeyName = 'convkey:' + convIdOf(session.id, convPeer);
+            const existing = await readRaw(convKeyName);
+            if (existing === undefined) {
+                return response.status(500).json({ ok: false, message: '存储暂时不可用' });
+            }
+
+            let merged;
+            if (!existing || !existing.wrapped) {
+                merged = { v: 1, ts: Date.now(), wrapped: {} };
+            } else {
+                merged = { v: existing.v || 1, ts: existing.ts || Date.now(), wrapped: existing.wrapped };
+            }
+
+            // 合并规则：已有的成员份额绝不覆盖（会话密钥一旦定下就不变），
+            // 只补此前缺失的成员 —— 这样双方同时创建也不会互相破坏
+            let changed = false;
+            for (const member of entries) {
+                if (!merged.wrapped[member]) {
+                    merged.wrapped[member] = {
+                        ephPub: wrapped[member].ephPub,
+                        iv: wrapped[member].iv,
+                        ct: wrapped[member].ct
+                    };
+                    changed = true;
+                }
+            }
+            if (!changed) {
+                return response.status(200).json({ ok: true, unchanged: true });
+            }
+
+            await writeRaw(convKeyName, merged);
+            return response.status(200).json({ ok: true });
+        }
+
+        // ---- 身份密钥：上传 / 更新 ----
         const pub = (body && body.pub || '').toString();
         const privEnc = body && body.privEnc;
 
@@ -131,25 +243,21 @@ export default async function handler(request, response) {
             return response.status(400).json({ ok: false, message: '私钥包格式不正确' });
         }
 
-        const existing = await readKeys(session.id);
-        if (existing === undefined) {
+        const existingKeys = await readRaw('keys:' + session.id);
+        if (existingKeys === undefined) {
             return response.status(500).json({ ok: false, message: '存储暂时不可用' });
         }
         // 覆盖已有密钥会让旧会话变成永远解不开的死数据，必须显式声明 rotate
-        if (existing && body.rotate !== true) {
+        if (existingKeys && body.rotate !== true) {
             return response.status(409).json({ ok: false, message: '密钥已存在，如需更换请显式声明 rotate' });
         }
 
-        const payload = { pub: pub, privEnc: { iv: privEnc.iv, ct: privEnc.ct }, v: 1, ts: Date.now() };
-        const putRes = await fetch(KV_URL + encodeURIComponent('keys:' + session.id), {
-            method: 'PUT',
-            headers: KV_HEADERS,
-            body: JSON.stringify(payload)
+        await writeRaw('keys:' + session.id, {
+            pub: pub,
+            privEnc: { iv: privEnc.iv, ct: privEnc.ct },
+            v: 1,
+            ts: Date.now()
         });
-        if (!putRes.ok) {
-            return response.status(500).json({ ok: false, message: '密钥保存失败，请稍后再试' });
-        }
-
         return response.status(200).json({ ok: true });
     } catch (e) {
         console.error('keys handler error:', e.message);

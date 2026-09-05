@@ -3,42 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Static</title>
+    <title>Static · 广场</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
     <script>
-        // 共享加密工具：AES-GCM 加解密（浏览器本地完成，密文上链）
-        // 密钥由双方约定，写在这里会暴露——改为从登录用户可获取的约定值派生：
-        // 用「两人ID + 共同密码哈希」派生密钥，只有登录者能算出（密码哈希只在登录时存在于内存）
-        const StaticCrypto = {
-            async deriveKey(myId, peerId, passwordHash) {
-                const material = [myId, peerId].sort().join('::') + '::' + passwordHash;
-                const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(material));
-                return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-            },
-            async encrypt(key, plaintext) {
-                const iv = crypto.getRandomValues(new Uint8Array(12));
-                const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(plaintext));
-                // base64 编码 iv + 密文
-                return btoa(String.fromCharCode(...iv)) + '.' + btoa(String.fromCharCode(...new Uint8Array(ct)));
-            },
-            async decrypt(key, payload) {
-                try {
-                    const parts = payload.split('.');
-                    if (parts.length !== 2) return null;
-                    const iv = Uint8Array.from(atob(parts[0]), c => c.charCodeAt(0));
-                    const ct = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
-                    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ct);
-                    return new TextDecoder().decode(pt);
-                } catch (e) { return null; } // 解码或解密失败=格式不对/被篡改/密钥不符
-            }
-        };
-
         document.addEventListener('DOMContentLoaded', function() {
-            // 读取会话（sessionStorage 是登录时存入的，标签页关闭即失效）
             const myId = sessionStorage.getItem('static_id');
             const myName = sessionStorage.getItem('static_name') || myId;
             const myToken = sessionStorage.getItem('static_token');
-            const myHash = sessionStorage.getItem('static_hash');
 
             // 未登录 → 回登录页
             if (!myId || !myToken) {
@@ -68,7 +39,7 @@
             sidebarOverlay.addEventListener('click', closeSidebar);
             document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
 
-            // ---------- 资料拉取（自己的 + 联系人的，全部来自服务器，保证改名/换头像后同步） ----------
+            // ---------- 拉取自己的最新资料（头像/名字） ----------
             async function fetchProfile(id) {
                 try {
                     const res = await fetch('/api/profile?id=' + encodeURIComponent(id));
@@ -78,7 +49,6 @@
                 return null;
             }
 
-            // 自己的资料 → 更新左上角名字和头像
             fetchProfile(myId).then(p => {
                 if (p) {
                     document.getElementById('me-name').textContent = p.name;
@@ -90,108 +60,23 @@
                 }
             });
 
-            // 码表：所有注册用户（就是你们俩），不显示自己
-            const allIds = ['wixzc17', 'lixs17'];
-            const listEl = document.getElementById('contact-list');
-
-            const cardEntries = []; // { card, name }，搜索时按名字匹配度重排
-
-            allIds.filter(id => id !== myId).forEach(id => {
-                const card = document.createElement('a');
-                card.className = 'contact-card';
-                card.href = 'chat.html?peer=' + encodeURIComponent(id);
-
-                // 头像占位（拉到资料后替换）
-                const avatar = document.createElement('div');
-                avatar.className = 'contact-avatar';
-                avatar.textContent = '@';
-                card.appendChild(avatar);
-
-                const info = document.createElement('div');
-                info.className = 'contact-info';
-                const nameEl = document.createElement('div');
-                nameEl.className = 'contact-name';
-                nameEl.textContent = '@' + id;
-                const idEl = document.createElement('div');
-                idEl.className = 'contact-id';
-                idEl.textContent = '@' + id;
-                info.appendChild(nameEl);
-                info.appendChild(idEl);
-                card.appendChild(info);
-
-                listEl.appendChild(card);
-
-                const entry = { card: card, name: '@' + id };
-                cardEntries.push(entry);
-
-                // 从服务器拉取对方最新资料
-                fetchProfile(id).then(p => {
-                    if (p) {
-                        nameEl.textContent = p.name;
-                        entry.name = p.name;
-                        if (p.avatar) {
-                            avatar.textContent = '';
-                            avatar.style.backgroundImage = 'url(' + p.avatar + ')';
-                            avatar.classList.add('has-img');
-                        } else {
-                            avatar.textContent = p.name.charAt(0).toUpperCase();
-                        }
-                    }
-                });
-            });
-
-            // ---------- 搜索：把名字最匹配的用户排到最上面 ----------
-            const searchInput = document.getElementById('contact-search');
-
-            function matchScore(name, q) {
-                const n = name.toLowerCase();
-                if (n === q) return 4;          // 完全一致
-                if (n.startsWith(q)) return 3;  // 开头匹配
-                if (n.indexOf(q) !== -1) return 2; // 包含
-                // 模糊：搜索的每个字符都出现在名字里
-                let all = true;
-                for (const ch of q) {
-                    if (n.indexOf(ch) === -1) { all = false; break; }
-                }
-                return all ? 1 : 0;
-            }
-
-            function doSearch() {
-                const q = searchInput.value.trim().toLowerCase();
-                if (!q) {
-                    // 空搜索恢复原顺序
-                    cardEntries.forEach(e => listEl.appendChild(e.card));
-                    return;
-                }
-                cardEntries
-                    .map((e, i) => ({ e: e, i: i, score: matchScore(e.name, q) }))
-                    .sort((a, b) => b.score - a.score || a.i - b.i)
-                    .forEach(s => listEl.appendChild(s.e.card));
-            }
-
-            document.getElementById('search-btn').addEventListener('click', doSearch);
-            searchInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') doSearch();
-            });
-
-            // ---------- 下拉阻尼回弹（只有联系人列表动，搜索框不动） ----------
-            const scroller = document.querySelector('.static-content');
-            const contactList = document.getElementById('contact-list');
+            // ---------- 下拉阻尼回弹（列表不满屏时也有橡皮筋手感） ----------
+            const scroller = document.querySelector('.plaza-content');
+            const feedList = document.getElementById('plaza-feed');
             let pullStartY = 0, pulling = false;
 
             scroller.addEventListener('touchstart', function(e) {
                 pulling = true;
                 pullStartY = e.touches[0].clientY;
-                contactList.style.transition = 'none';
+                feedList.style.transition = 'none';
             }, { passive: true });
 
             scroller.addEventListener('touchmove', function(e) {
                 if (!pulling) return;
                 const dy = e.touches[0].clientY - pullStartY;
                 if (dy > 0 && scroller.scrollTop <= 0) {
-                    // 阻尼：位移随拉动距离递减，越拉越沉
                     const offset = Math.pow(dy, 0.75);
-                    contactList.style.transform = 'translateY(' + offset + 'px)';
+                    feedList.style.transform = 'translateY(' + offset + 'px)';
                     e.preventDefault();
                 }
             }, { passive: false });
@@ -199,8 +84,8 @@
             function springBack() {
                 if (!pulling) return;
                 pulling = false;
-                contactList.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
-                contactList.style.transform = '';
+                feedList.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
+                feedList.style.transform = '';
             }
             scroller.addEventListener('touchend', springBack);
             scroller.addEventListener('touchcancel', springBack);
@@ -238,142 +123,23 @@
             font-family: Arial, sans-serif;
         }
 
-        .static-content {
+        .plaza-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 150px 20px 30px;
-            overflow-y: auto;          /* 联系人多时可滚动，滚动只发生在内容区内部 */
+            overflow-y: auto;          /* 推文多时可滚动，滚动只发生在内容区内部 */
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
         }
 
-        .search-bar {
-            width: 100%;
-            max-width: 420px;
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .search-input {
-            flex: 1;
-            border: 1px solid #404040;
-            border-radius: 20px;
-            padding: 10px 16px;
-            font-size: 14px;
-            background: #000000;
-            color: #ffffff;
-            outline: none;
-            transition: border-color 0.3s ease;
-        }
-
-        .search-input:focus {
-            border-color: #ffffff;
-        }
-
-        .search-input::placeholder {
-            color: #444444;
-        }
-
-        .search-btn {
-            border: 1px solid #404040;
-            border-radius: 20px;
-            padding: 8px 14px;
-            background: #000000;
-            color: #ffffff;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .search-btn svg {
-            width: 20px;
-            height: 20px;
-            display: block;
-            fill: #ffffff;
-            transition: fill 0.3s ease;
-        }
-
-        .search-btn:hover {
-            background: #ffffff;
-        }
-
-        .search-btn:hover svg {
-            fill: #000000;
-        }
-
-        .contact-list {
+        .plaza-feed {
             width: 100%;
             max-width: 420px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-        }
-
-        .contact-card {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 14px 4px;
-            border: none;
-            border-bottom: 1px solid #ffffff;
-            border-radius: 0;
-            text-decoration: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .contact-card:hover {
-            opacity: 0.7;
-        }
-
-        .contact-avatar {
-            width: 46px;
-            height: 46px;
-            border-radius: 50%;
-            border: 1px solid #404040;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: 700;
-            color: #ffffff;
-            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
-            flex-shrink: 0;
-            background-size: cover;
-            background-position: center;
-        }
-
-        .contact-info {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            min-width: 0;
-        }
-
-        .contact-name {
-            font-size: 16px;
-            color: #ffffff;
-            font-weight: 700;
-        }
-
-        .contact-id {
-            font-size: 12px;
-            color: #666666;
-            letter-spacing: 0.5px;
-        }
-
-        .sidebar-logout {
-            margin-top: auto;
-            background: none;
-            border: none;
-            width: 100%;
-            text-align: left;
-            font-family: inherit;
+            min-height: 0;
         }
 
         .back-link {
@@ -507,6 +273,15 @@
             color: #ffffff;
         }
 
+        .sidebar-logout {
+            margin-top: auto;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+
         /* 底部栏：竖线一分为二，左 chat 入口，右留空 */
         .bottom-bar {
             display: flex;
@@ -544,8 +319,12 @@
             stroke: #000000;
         }
 
+        .bar-empty {
+            pointer-events: none;
+        }
+
         /* 分隔竖线：短于底栏高度，居中 */
-        .bottom-bar::before {
+        .bar-empty::before {
             content: '';
             position: absolute;
             left: 50%;
@@ -557,7 +336,7 @@
         }
 
         @media (max-width: 768px) {
-            .static-content {
+            .plaza-content {
                 padding: 110px 16px 24px;
             }
 
@@ -617,20 +396,12 @@
         <button class="sidebar-item sidebar-logout" id="logout-sidebar-btn" type="button">退出登录</button>
     </div>
 
-    <div class="static-content">
-        <div class="search-bar">
-            <input type="text" class="search-input" id="contact-search" placeholder="" autocomplete="off">
-            <button type="button" class="search-btn" id="search-btn" title="搜索" aria-label="搜索">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M10.5 3a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z"/>
-                    <path d="M15.9 15.9 L21 21 a1 1 0 0 1-1.4 1.4 L14.5 17.3 a1 1 0 0 1 1.4-1.4z"/>
-                </svg>
-            </button>
-        </div>
-        <div class="contact-list" id="contact-list"></div>
+    <!-- 广场内容区（推文列表，暂空） -->
+    <div class="plaza-content">
+        <div class="plaza-feed" id="plaza-feed"></div>
     </div>
 
-    <!-- 底部栏：竖线一分为二，左 chat 入口，右留空 -->
+    <!-- 底部栏：竖线一分为二，左 chat 入口，当前页在右 -->
     <div class="bottom-bar">
         <a class="bar-tab" href="static.html" title="chat" aria-label="chat">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

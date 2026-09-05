@@ -45,7 +45,6 @@
             // 对话对象
             const params = new URLSearchParams(window.location.search);
             const peerId = (params.get('peer') || '').replace(/^@/, '');
-            const peerAvatarEl = document.getElementById('peer-avatar-char');
 
             if (!/^[a-zA-Z0-9]+$/.test(peerId)) {
                 window.location.href = 'static.html';
@@ -54,25 +53,23 @@
 
             document.getElementById('peer-name').textContent = '@' + peerId;
             document.getElementById('peer-id').textContent = '@' + peerId;
-            peerAvatarEl.textContent = '@';
 
-            // 拉取对方最新资料（改名/换头像后同步）
-            (async function() {
+            // 双方资料缓存（消息区头像用：头像图片或名字首字符）
+            const profiles = {}; // id -> { name, avatar }
+            async function loadProfile(id) {
                 try {
-                    const res = await fetch('/api/profile?id=' + encodeURIComponent(peerId));
+                    const res = await fetch('/api/profile?id=' + encodeURIComponent(id));
                     const data = await res.json();
-                    if (data.ok) {
-                        document.getElementById('peer-name').textContent = data.name;
-                        if (data.avatar) {
-                            peerAvatarEl.textContent = '';
-                            peerAvatarEl.style.backgroundImage = 'url(' + data.avatar + ')';
-                            peerAvatarEl.classList.add('has-img');
-                        } else {
-                            peerAvatarEl.textContent = data.name.charAt(0).toUpperCase();
-                        }
-                    }
-                } catch (e) { /* 拉取失败保持 ID 显示 */ }
-            })();
+                    if (data.ok) profiles[id] = { name: data.name, avatar: data.avatar };
+                } catch (e) {}
+            }
+
+            // 拉取对方最新资料（改名/换头像后同步到顶部名字）
+            loadProfile(peerId).then(() => {
+                const p = profiles[peerId];
+                if (p) document.getElementById('peer-name').textContent = p.name;
+            });
+            loadProfile(myId); // 自己的头像（消息区用）
 
             // 加密密钥（两人ID + 密码哈希派生）
             const key = await StaticCrypto.deriveKey(myId, peerId, myHash);
@@ -87,27 +84,52 @@
             let polling = null;
 
             // ---------- 消息渲染 ----------
+            // 头像规则：连续发言只有第一条带头像，发言权交接时重新出现
+            function makeAvatarEl(senderId) {
+                const el = document.createElement('div');
+                el.className = 'msg-avatar';
+                const p = profiles[senderId];
+                if (p && p.avatar) {
+                    el.style.backgroundImage = 'url(' + p.avatar + ')';
+                    el.classList.add('has-img');
+                } else {
+                    el.textContent = ((p && p.name) || '@' + senderId).charAt(0).toUpperCase();
+                }
+                return el;
+            }
+
             function renderMessages(messages) {
                 const fingerprint = messages.length + ':' + (messages[messages.length - 1] ? messages[messages.length - 1].ts : 0);
                 if (fingerprint === rendered) return;
                 rendered = fingerprint;
 
                 messagesEl.innerHTML = '';
-                messages.forEach(async m => {
-                    const bubble = document.createElement('div');
-                    bubble.className = 'bubble-row ' + (m.from === myId ? 'mine' : 'theirs');
+                let prevFrom = null;
+                messages.forEach(m => {
+                    const isMine = m.from === myId;
+                    const row = document.createElement('div');
+                    row.className = 'bubble-row ' + (isMine ? 'mine' : 'theirs');
+
+                    // 头像：只在本轮发言的第一条显示
+                    if (m.from !== prevFrom) {
+                        row.appendChild(makeAvatarEl(m.from));
+                    }
+
+                    const col = document.createElement('div');
+                    col.className = 'bubble-col';
 
                     const bubbleInner = document.createElement('div');
                     bubbleInner.className = 'bubble';
 
-                    // 解密
-                    const text = await StaticCrypto.decrypt(key, m.ct);
-                    if (text === null) {
-                        bubbleInner.textContent = '[无法解密的消息]';
-                        bubbleInner.classList.add('undecryptable');
-                    } else {
-                        bubbleInner.textContent = text;
-                    }
+                    // 解密（异步，但不改变 DOM 顺序）
+                    StaticCrypto.decrypt(key, m.ct).then(text => {
+                        if (text === null) {
+                            bubbleInner.textContent = '[无法解密的消息]';
+                            bubbleInner.classList.add('undecryptable');
+                        } else {
+                            bubbleInner.textContent = text;
+                        }
+                    });
 
                     // 时间戳
                     const timeEl = document.createElement('div');
@@ -116,9 +138,12 @@
                     timeEl.textContent = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
                         String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
-                    bubble.appendChild(bubbleInner);
-                    bubble.appendChild(timeEl);
-                    messagesEl.appendChild(bubble);
+                    col.appendChild(bubbleInner);
+                    col.appendChild(timeEl);
+                    row.appendChild(col);
+                    messagesEl.appendChild(row);
+
+                    prevFrom = m.from;
                 });
 
                 // 滚到底部
@@ -221,23 +246,6 @@
             opacity: 0.6;
         }
 
-        .peer-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 1px solid #404040;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 15px;
-            font-weight: 700;
-            color: #ffffff;
-            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
-            background-size: cover;
-            background-position: center;
-            flex-shrink: 0;
-        }
-
         .peer-info {
             display: flex;
             flex-direction: column;
@@ -265,18 +273,49 @@
 
         .bubble-row {
             display: flex;
-            flex-direction: column;
-            max-width: 75%;
+            align-items: flex-end;
+            max-width: 78%;
         }
 
         .bubble-row.mine {
             align-self: flex-end;
-            align-items: flex-end;
+            flex-direction: row-reverse; /* 头像贴右 */
         }
 
         .bubble-row.theirs {
             align-self: flex-start;
+        }
+
+        .bubble-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bubble-row.mine .bubble-col {
+            align-items: flex-end;
+        }
+
+        .bubble-row.theirs .bubble-col {
             align-items: flex-start;
+        }
+
+        /* 消息区头像：只出现在每轮发言的第一条 */
+        .msg-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+            margin: 0 8px;
         }
 
         .bubble {
@@ -376,7 +415,6 @@
 <body>
     <div class="chat-header">
         <a class="back-link" href="static.html">&larr;</a>
-        <div class="peer-avatar" id="peer-avatar-char"></div>
         <div class="peer-info">
             <div class="peer-name" id="peer-name"></div>
             <div class="peer-id" id="peer-id"></div>

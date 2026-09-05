@@ -42,12 +42,8 @@ export default async function handler(request, response) {
         return response.status(400).json({ ok: false, message: 'ID 或密码不正确' });
     }
 
-    // 读取环境变量
-    const raw = process.env.STATIC_USERS;
-    if (!raw) {
-        console.error('STATIC_USERS 环境变量未配置');
-        return response.status(500).json({ ok: false, message: '服务器尚未配置用户数据' });
-    }
+    // 读取环境变量（v2 后账号可全部在 KV 注册，变量缺失时按空对象处理，让 KV 兜底生效）
+    const raw = process.env.STATIC_USERS || '{}';
 
     let users;
     try {

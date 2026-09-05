@@ -174,18 +174,13 @@
             font-weight: 700;
             font-style: italic;
             color: #ffffff;
-            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             letter-spacing: 1px;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
             line-height: 1;
-            margin-bottom: 10px;
-        }
-
-        .welcome-text {
-            font-size: 13px;
-            color: #888888;
-            letter-spacing: 1px;
-            margin-bottom: 40px;
+            margin-bottom: 50px;
+            align-self: flex-end;
+            padding-right: 40px;
         }
 
         .codebook-label {
@@ -425,6 +420,7 @@
         @media (max-width: 768px) {
             .static-title {
                 font-size: 38px;
+                padding-right: 20px;
             }
 
             .static-content {
@@ -483,7 +479,6 @@
 
     <div class="static-content">
         <div class="static-title">Static</div>
-        <div class="welcome-text">欢迎回来</div>
 
         <div class="codebook-label">码表</div>
         <div class="contact-list" id="contact-list"></div>

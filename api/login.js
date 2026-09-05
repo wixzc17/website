@@ -44,6 +44,25 @@ export default async function handler(request, response) {
 
     // 统一错误信息，不区分「ID 不存在」和「密码错误」
     if (!user || !user.hash || user.hash.toLowerCase() !== hash) {
+        // 硬编码账号没命中 → 查 KV 注册账号（user:<id>）
+        try {
+            const kvUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/` + encodeURIComponent('user:' + id);
+            const kvRes = await fetch(kvUrl, {
+                headers: { 'Authorization': `Bearer ${process.env.CLOUDFLARE_KV_TOKEN}` }
+            });
+            if (kvRes.ok) {
+                const acct = await kvRes.json();
+                if (acct && typeof acct.hash === 'string' && acct.hash.toLowerCase() === hash) {
+                    // KV 账号命中：签发 token 继续走下面的正常流程
+                    const token = issueToken(id, hash);
+                    return response.status(200).json({
+                        ok: true,
+                        name: acct.name || ('@' + id),
+                        token: token
+                    });
+                }
+            }
+        } catch (e) { /* KV 异常按登录失败处理 */ }
         return response.status(200).json({ ok: false, message: 'ID 或密码不正确' });
     }
 

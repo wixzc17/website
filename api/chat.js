@@ -26,8 +26,26 @@ export default async function handler(request, response) {
 
     // ---------- 工具函数 ----------
 
-    // 验证会话 token，返回 { id } 或 null
-    function parseToken(token) {
+    // 读取用户密码哈希：STATIC_USERS（硬编码初始账号）优先，KV 注册账号兜底
+    async function findUserHash(id) {
+        let users = {};
+        try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) {}
+        if (users[id] && users[id].hash) return users[id].hash;
+
+        try {
+            const res = await fetch(KV_URL + encodeURIComponent('user:' + id), {
+                headers: { 'Authorization': KV_HEADERS.Authorization }
+            });
+            if (res.ok) {
+                const acct = await res.json();
+                if (acct && typeof acct.hash === 'string') return acct.hash;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    // 验证会话 token，返回 { id } 或 null（异步：可能要查 KV）
+    async function parseToken(token) {
         if (!token || typeof token !== 'string' || token.length > 512) return null;
         const parts = token.split('.');
         if (parts.length !== 3) return null;
@@ -39,12 +57,10 @@ export default async function handler(request, response) {
         if (age < 0 || age > 7 * 24 * 3600 * 1000) return null;
 
         // 验证签名：需要该用户的密码哈希参与计算
-        let users = {};
-        try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) { return null; }
-        const user = users[id];
-        if (!user || !user.hash) return null;
+        const userHash = await findUserHash(id);
+        if (!userHash) return null;
 
-        const material = id + '.' + ts + '.' + user.hash + '.static-salt';
+        const material = id + '.' + ts + '.' + userHash + '.static-salt';
         const expected = crypto.createHash('md5').update(material).digest('hex').slice(0, 16);
         if (sig !== expected) return null;
 
@@ -106,7 +122,7 @@ export default async function handler(request, response) {
     try {
         if (request.method === 'POST') {
             const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body;
-            const session = parseToken(body && body.token);
+            const session = await parseToken(body && body.token);
             const to = (body && body.to || '').toString().trim().replace(/^@/, '');
             const ciphertext = (body && body.ciphertext || '').toString();
 
@@ -123,10 +139,8 @@ export default async function handler(request, response) {
                 return response.status(400).json({ ok: false, message: '消息内容不合法' });
             }
 
-            // 确认目标用户存在（读 STATIC_USERS）
-            let users = {};
-            try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) {}
-            if (!users[to]) {
+            // 确认目标用户存在（STATIC_USERS 或 KV 注册账号）
+            if (!(await findUserHash(to))) {
                 return response.status(400).json({ ok: false, message: '目标用户不存在' });
             }
 
@@ -151,7 +165,7 @@ export default async function handler(request, response) {
             const peer = (url.searchParams.get('peer') || '').toString().trim().replace(/^@/, '');
             const mid = (url.searchParams.get('mid') || '').toString();
 
-            const session = parseToken(token);
+            const session = await parseToken(token);
             if (!session) {
                 return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
             }
@@ -180,7 +194,7 @@ export default async function handler(request, response) {
             const token = url.searchParams.get('token') || '';
             const peer = (url.searchParams.get('peer') || '').toString().trim().replace(/^@/, '');
 
-            const session = parseToken(token);
+            const session = await parseToken(token);
             if (!session) {
                 return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
             }

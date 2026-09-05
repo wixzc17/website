@@ -33,7 +33,7 @@
             }
         };
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             // 读取会话（sessionStorage 是登录时存入的，标签页关闭即失效）
             const myId = sessionStorage.getItem('static_id');
             const myName = sessionStorage.getItem('static_name') || myId;
@@ -90,11 +90,18 @@
                 }
             });
 
-            // 码表：所有注册用户（就是你们俩），不显示自己
-            const allIds = ['wixzc17', 'lixs17'];
+            // 码表：所有用户（初始硬编码 + KV 注册账号），从服务器拉取
             const listEl = document.getElementById('contact-list');
 
             const cardEntries = []; // { card, name }，搜索时按名字匹配度重排
+
+            let allIds = [];
+            try {
+                const res = await fetch('/api/users?token=' + encodeURIComponent(myToken));
+                const data = await res.json();
+                if (data.ok && Array.isArray(data.ids)) allIds = data.ids;
+            } catch (e) {}
+            if (allIds.length === 0) allIds = ['wixzc17', 'lixs17']; // 拉取失败兜底
 
             allIds.filter(id => id !== myId).forEach(id => {
                 const card = document.createElement('a');

@@ -24,8 +24,26 @@ export default async function handler(request, response) {
         return response.status(405).json({ ok: false, message: '方法不允许' });
     }
 
-    // ---------- 验证会话 token（与 chat.js 相同的签名逻辑） ----------
-    function parseToken(token) {
+    // ---------- 验证会话 token（与 chat.js 相同的签名逻辑，兼容 KV 注册账号） ----------
+    const KV_URL = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/`;
+
+    async function findUserHash(id) {
+        let users = {};
+        try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) {}
+        if (users[id] && users[id].hash) return users[id].hash;
+        try {
+            const res = await fetch(KV_URL + encodeURIComponent('user:' + id), {
+                headers: { 'Authorization': `Bearer ${process.env.CLOUDFLARE_KV_TOKEN}` }
+            });
+            if (res.ok) {
+                const acct = await res.json();
+                if (acct && typeof acct.hash === 'string') return acct.hash;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    async function parseToken(token) {
         if (!token || typeof token !== 'string' || token.length > 512) return null;
         const parts = token.split('.');
         if (parts.length !== 3) return null;
@@ -34,12 +52,10 @@ export default async function handler(request, response) {
         const age = Date.now() - parseInt(ts, 10);
         if (age < 0 || age > 7 * 24 * 3600 * 1000) return null;
 
-        let users = {};
-        try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) { return null; }
-        const user = users[id];
-        if (!user || !user.hash) return null;
+        const userHash = await findUserHash(id);
+        if (!userHash) return null;
 
-        const material = id + '.' + ts + '.' + user.hash + '.static-salt';
+        const material = id + '.' + ts + '.' + userHash + '.static-salt';
         const expected = crypto.createHash('md5').update(material).digest('hex').slice(0, 16);
         if (sig !== expected) return null;
 
@@ -48,7 +64,7 @@ export default async function handler(request, response) {
 
     try {
         const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body;
-        const session = parseToken(body && body.token);
+        const session = await parseToken(body && body.token);
         if (!session) {
             return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
         }

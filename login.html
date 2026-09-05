@@ -78,7 +78,27 @@
                 } catch (e) { /* 网络异常则留在登录页手动登录 */ }
             })();
 
-            // 登录
+            // ---------- 注册 / 登录切换 ----------
+            const registerToggle = document.getElementById('register-toggle');
+            const nameField = document.getElementById('name-field');
+            const confirmField = document.getElementById('confirm-field');
+            const loginBtn2 = document.getElementById('login-btn');
+            let isRegister = false;
+
+            function setMode(register) {
+                isRegister = register;
+                nameField.style.display = register ? 'block' : 'none';
+                confirmField.style.display = register ? 'block' : 'none';
+                loginBtn2.textContent = register ? '注册' : '登录';
+                registerToggle.textContent = register ? '已有账号？登录' : '没有账号？注册';
+                loginError.textContent = '';
+            }
+
+            registerToggle.addEventListener('click', function() {
+                setMode(!isRegister);
+            });
+
+            // 注册 + 登录共用同一个表单提交逻辑
             loginForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 loginError.textContent = '';
@@ -91,11 +111,37 @@
                     return;
                 }
 
-                loginBtn.disabled = true;
-                loginBtn.textContent = '验证中...';
+                loginBtn2.disabled = true;
+                loginBtn2.textContent = isRegister ? '注册中...' : '验证中...';
 
                 try {
                     const hash = await sha256(password);
+
+                    if (isRegister) {
+                        // 注册：先走注册接口
+                        const name = document.getElementById('name-input').value.trim();
+                        const confirm = document.getElementById('confirm-input').value;
+                        if (password !== confirm) {
+                            loginError.textContent = '两次输入的密码不一致';
+                            loginBtn2.disabled = false;
+                            loginBtn2.textContent = '注册';
+                            return;
+                        }
+                        const regRes = await fetch('/api/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: id, hash: hash, name: name })
+                        });
+                        const regData = await regRes.json();
+                        if (!regData.ok) {
+                            loginError.textContent = regData.message || '注册失败';
+                            loginBtn2.disabled = false;
+                            loginBtn2.textContent = '注册';
+                            return;
+                        }
+                    }
+
+                    // 登录（注册成功后自动登录）
                     const res = await fetch('/api/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -117,13 +163,13 @@
                         window.location.href = 'static.html';
                     } else {
                         loginError.textContent = data.message || 'ID 或密码不正确';
-                        loginBtn.disabled = false;
-                        loginBtn.textContent = '登录';
+                        loginBtn2.disabled = false;
+                        loginBtn2.textContent = isRegister ? '注册' : '登录';
                     }
                 } catch (err) {
                     loginError.textContent = '网络异常，请稍后再试';
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = '登录';
+                    loginBtn2.disabled = false;
+                    loginBtn2.textContent = isRegister ? '注册' : '登录';
                 }
             });
 
@@ -254,6 +300,22 @@
             color: #aa6666;
             text-align: center;
             margin-top: 10px;
+        }
+
+        .register-toggle {
+            margin-top: 4px;
+            background: none;
+            border: none;
+            font-size: 12px;
+            color: #666666;
+            cursor: pointer;
+            letter-spacing: 1px;
+            padding: 0;
+            transition: color 0.3s ease;
+        }
+
+        .register-toggle:hover {
+            color: #ffffff;
         }
 
         .tool-section {
@@ -391,15 +453,27 @@
                 <input type="text" id="id-input" placeholder="@your_id" autocomplete="off" autocapitalize="off" spellcheck="false">
             </div>
 
+            <div class="form-field" id="name-field" style="display:none">
+                <label for="name-input">名字（可选）</label>
+                <input type="text" id="name-input" placeholder="" autocomplete="off" maxlength="16">
+            </div>
+
             <div class="form-field">
                 <label for="password-input">密码</label>
                 <input type="password" id="password-input" placeholder="••••••••" autocomplete="off">
+            </div>
+
+            <div class="form-field" id="confirm-field" style="display:none">
+                <label for="confirm-input">确认密码</label>
+                <input type="password" id="confirm-input" placeholder="••••••••" autocomplete="off">
             </div>
 
             <button type="submit" class="login-btn" id="login-btn">登录</button>
 
             <div class="login-error" id="login-error"></div>
         </form>
+
+        <button type="button" class="register-toggle" id="register-toggle">没有账号？注册</button>
 
         <div class="tool-section">
             <button type="button" class="tool-toggle" id="tool-toggle">首次使用？生成密码哈希 &gt;</button>

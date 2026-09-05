@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static 登录</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script src="/static-crypto.js"></script>
     <script>
         // SHA-256 纯前端实现（用于生成密码哈希，方便用户在本地算好再填入 Vercel 环境变量）
         async function sha256(text) {
@@ -13,6 +14,23 @@
             return Array.from(new Uint8Array(hashBuffer))
                 .map(b => b.toString(16).padStart(2, '0'))
                 .join('');
+        }
+
+        // 确保账号拥有身份密钥（v2 密钥体系）
+        // 没有就在本地生成一对，用密码哈希派生的 KEK 加密后上传；私钥明文不出浏览器
+        // 失败不影响登录，最坏情况只是暂时用不了新密钥体系（旧链路照常工作）
+        async function ensureIdentityKeys(id, hash, hasKeys) {
+            if (hasKeys) return;
+            try {
+                const token = sessionStorage.getItem('static_token') || '';
+                const identity = await StaticKeys.generateIdentity();
+                const privEnc = await StaticKeys.exportEncryptedPrivate(identity.privKey, hash, id);
+                await fetch('/api/keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token, pub: identity.pubB64, privEnc: privEnc })
+                });
+            } catch (e) { /* 静默失败：登录流程不该被密钥初始化拖住 */ }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -67,6 +85,7 @@
                             sessionStorage.setItem('static_token', data.token || '');
                             sessionStorage.setItem('static_hash', rhash);
                         } catch (e) {}
+                        await ensureIdentityKeys(rid, rhash, data.hasKeys);
                         window.location.href = 'static.html';
                     } else {
                         // 记住的凭证已失效（如密码被修改），清除后回到手动登录
@@ -165,6 +184,10 @@
                             localStorage.setItem('static_remember_id', id);
                             localStorage.setItem('static_remember_hash', hash);
                         } catch (e) { /* 隐私模式下存不进去，聊天功能将不可用 */ }
+                        if (!data.hasKeys) {
+                            loginBtn2.textContent = '生成密钥中...';
+                            await ensureIdentityKeys(id, hash, data.hasKeys);
+                        }
                         window.location.href = 'static.html';
                     } else {
                         loginError.textContent = data.message || 'ID 或密码不正确';

@@ -4,6 +4,23 @@
 
 import crypto from 'crypto';
 
+const KV_URL = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/`;
+
+// 判断用户是否已有身份密钥（v2 密钥体系）
+// 没有的话前端会在登录后自动补一对，旧账号无需任何手动操作
+async function hasIdentityKeys(id) {
+    try {
+        const res = await fetch(KV_URL + encodeURIComponent('keys:' + id), {
+            headers: { 'Authorization': `Bearer ${process.env.CLOUDFLARE_KV_TOKEN}` }
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        return !!(data && typeof data.pub === 'string');
+    } catch (e) {
+        return false;
+    }
+}
+
 export default async function handler(request, response) {
     // 只接受 POST
     if (request.method !== 'POST') {
@@ -58,7 +75,8 @@ export default async function handler(request, response) {
                     return response.status(200).json({
                         ok: true,
                         name: acct.name || ('@' + id),
-                        token: token
+                        token: token,
+                        hasKeys: await hasIdentityKeys(id)
                     });
                 }
             }
@@ -73,7 +91,8 @@ export default async function handler(request, response) {
     return response.status(200).json({
         ok: true,
         name: user.name || ('@' + id),
-        token: token
+        token: token,
+        hasKeys: await hasIdentityKeys(id)
     });
 }
 

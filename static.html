@@ -241,18 +241,31 @@
         .search-btn {
             border: 1px solid #404040;
             border-radius: 20px;
-            padding: 10px 20px;
-            font-size: 14px;
+            padding: 8px 14px;
             background: #000000;
             color: #ffffff;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-btn svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+            fill: #ffffff;
+            transition: fill 0.3s ease;
         }
 
         .search-btn:hover {
             background: #ffffff;
-            color: #000000;
+        }
+
+        .search-btn:hover svg {
+            fill: #000000;
         }
 
         .contact-list {
@@ -527,7 +540,11 @@
     <div class="static-content">
         <div class="search-bar">
             <input type="text" class="search-input" id="contact-search" placeholder="" autocomplete="off">
-            <button type="button" class="search-btn" id="search-btn">搜索</button>
+            <button type="button" class="search-btn" id="search-btn" title="搜索" aria-label="搜索">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13 2 L4.5 13.5 L10.5 13.5 L9 22 L19.5 9.5 L13 9.5 Z"/>
+                </svg>
+            </button>
         </div>
         <div class="contact-list" id="contact-list"></div>
     </div>

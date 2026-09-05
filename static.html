@@ -94,6 +94,8 @@
             const allIds = ['wixzc17', 'lixs17'];
             const listEl = document.getElementById('contact-list');
 
+            const cardEntries = []; // { card, name }，搜索时按名字匹配度重排
+
             allIds.filter(id => id !== myId).forEach(id => {
                 const card = document.createElement('a');
                 card.className = 'contact-card';
@@ -119,10 +121,14 @@
 
                 listEl.appendChild(card);
 
+                const entry = { card: card, name: '@' + id };
+                cardEntries.push(entry);
+
                 // 从服务器拉取对方最新资料
                 fetchProfile(id).then(p => {
                     if (p) {
                         nameEl.textContent = p.name;
+                        entry.name = p.name;
                         if (p.avatar) {
                             avatar.textContent = '';
                             avatar.style.backgroundImage = 'url(' + p.avatar + ')';
@@ -132,6 +138,40 @@
                         }
                     }
                 });
+            });
+
+            // ---------- 搜索：把名字最匹配的用户排到最上面 ----------
+            const searchInput = document.getElementById('contact-search');
+
+            function matchScore(name, q) {
+                const n = name.toLowerCase();
+                if (n === q) return 4;          // 完全一致
+                if (n.startsWith(q)) return 3;  // 开头匹配
+                if (n.indexOf(q) !== -1) return 2; // 包含
+                // 模糊：搜索的每个字符都出现在名字里
+                let all = true;
+                for (const ch of q) {
+                    if (n.indexOf(ch) === -1) { all = false; break; }
+                }
+                return all ? 1 : 0;
+            }
+
+            function doSearch() {
+                const q = searchInput.value.trim().toLowerCase();
+                if (!q) {
+                    // 空搜索恢复原顺序
+                    cardEntries.forEach(e => listEl.appendChild(e.card));
+                    return;
+                }
+                cardEntries
+                    .map((e, i) => ({ e: e, i: i, score: matchScore(e.name, q) }))
+                    .sort((a, b) => b.score - a.score || a.i - b.i)
+                    .forEach(s => listEl.appendChild(s.e.card));
+            }
+
+            document.getElementById('search-btn').addEventListener('click', doSearch);
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') doSearch();
             });
 
             // 退出登录（侧边栏里，同时清除本设备的自动登录记忆）
@@ -170,38 +210,49 @@
             padding: 150px 20px 30px;
         }
 
-        .static-title {
-            font-size: 48px;
-            font-weight: 700;
-            font-style: italic;
-            color: #ffffff;
-            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
-            letter-spacing: 1px;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
-            line-height: 1;
-        }
-
-        .codebook-header {
+        .search-bar {
             width: 100%;
             max-width: 420px;
             display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            border-bottom: 1px solid #262626;
-            padding-bottom: 0;
-            margin-bottom: 14px;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
-        .codebook-label {
-            font-size: 16px;
+        .search-input {
+            flex: 1;
+            border: 1px solid #404040;
+            border-radius: 20px;
+            padding: 10px 16px;
+            font-size: 14px;
+            background: #000000;
             color: #ffffff;
-            letter-spacing: 3px;
-            line-height: 1;
-            padding-bottom: 8px;
+            outline: none;
+            transition: border-color 0.3s ease;
         }
 
-        .codebook-header .static-title {
-            padding-bottom: 0;
+        .search-input:focus {
+            border-color: #ffffff;
+        }
+
+        .search-input::placeholder {
+            color: #444444;
+        }
+
+        .search-btn {
+            border: 1px solid #404040;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-size: 14px;
+            background: #000000;
+            color: #ffffff;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            background: #ffffff;
+            color: #000000;
         }
 
         .contact-list {
@@ -418,10 +469,6 @@
         }
 
         @media (max-width: 768px) {
-            .static-title {
-                font-size: 34px;
-            }
-
             .static-content {
                 padding: 160px 16px 24px;
             }
@@ -478,9 +525,9 @@
     </div>
 
     <div class="static-content">
-        <div class="codebook-header">
-            <div class="codebook-label">码表</div>
-            <div class="static-title">Static</div>
+        <div class="search-bar">
+            <input type="text" class="search-input" id="contact-search" placeholder="搜索用户" autocomplete="off">
+            <button type="button" class="search-btn" id="search-btn">搜索</button>
         </div>
         <div class="contact-list" id="contact-list"></div>
     </div>

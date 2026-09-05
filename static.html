@@ -178,21 +178,29 @@
             letter-spacing: 1px;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
             line-height: 1;
-            margin-bottom: 50px;
-            align-self: flex-end;
-            padding-right: 40px;
+        }
+
+        .codebook-header {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            border-bottom: 1px solid #262626;
+            padding-bottom: 0;
+            margin-bottom: 14px;
         }
 
         .codebook-label {
-            font-size: 12px;
-            color: #666666;
+            font-size: 16px;
+            color: #ffffff;
             letter-spacing: 3px;
-            margin-bottom: 14px;
-            align-self: flex-start;
-            border-bottom: 1px solid #262626;
+            line-height: 1;
             padding-bottom: 8px;
-            width: 100%;
-            max-width: 420px;
+        }
+
+        .codebook-header .static-title {
+            padding-bottom: 0;
         }
 
         .contact-list {
@@ -419,8 +427,7 @@
 
         @media (max-width: 768px) {
             .static-title {
-                font-size: 38px;
-                padding-right: 20px;
+                font-size: 34px;
             }
 
             .static-content {
@@ -478,9 +485,10 @@
     </div>
 
     <div class="static-content">
-        <div class="static-title">Static</div>
-
-        <div class="codebook-label">码表</div>
+        <div class="codebook-header">
+            <div class="codebook-label">码表</div>
+            <div class="static-title">Static</div>
+        </div>
         <div class="contact-list" id="contact-list"></div>
 
         <button class="logout-btn" id="logout-btn">退出登录</button>

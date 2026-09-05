@@ -38,7 +38,7 @@
             letter-spacing: 3px;
         }
 
-        /* 上下两半屏 */
+        /* 上下两半屏（只是布局容器，不可点击） */
         .half {
             flex: 1;
             display: flex;
@@ -46,12 +46,6 @@
             align-items: center;
             justify-content: center;
             padding: 16px 24px;
-            text-decoration: none;
-            transition: background 0.3s ease;
-        }
-
-        .half:hover {
-            background: #0a0a0a;
         }
 
         /* 中间的白色横线 */
@@ -61,7 +55,12 @@
             flex-shrink: 0;
         }
 
-        /* 模块矩形框 */
+        /* 模块入口：白色矩形框本身才是链接 */
+        .module-link {
+            text-decoration: none;
+            display: inline-block;
+        }
+
         .module-box {
             border: 1px solid #ffffff;
             padding: 18px 56px;
@@ -78,11 +77,11 @@
             transition: color 0.3s ease;
         }
 
-        .half:hover .module-box {
+        .module-link:hover .module-box {
             background: #ffffff;
         }
 
-        .half:hover .module-box span {
+        .module-link:hover .module-box span {
             color: #000000;
         }
 
@@ -125,16 +124,20 @@
 <body>
     <div class="select-hint"><span>请选择您想要使用的模块</span></div>
 
-    <a class="half" href="search.html">
-        <div class="module-box"><span>index</span></div>
+    <div class="half">
+        <a class="module-link" href="search.html">
+            <div class="module-box"><span>index</span></div>
+        </a>
         <div class="module-desc">基于 Microsoft Bing 的搜索窗口</div>
-    </a>
+    </div>
 
     <div class="divider"></div>
 
-    <a class="half" href="login.html">
-        <div class="module-box"><span>Static</span></div>
+    <div class="half">
+        <a class="module-link" href="login.html">
+            <div class="module-box"><span>Static</span></div>
+        </a>
         <div class="module-desc">面向注册成员的加密通讯模块。消息经端到端加密传输与存储，仅对话双方可见。</div>
-    </a>
+    </div>
 </body>
 </html>

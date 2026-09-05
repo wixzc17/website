@@ -23,6 +23,7 @@
             const avatarBtn = document.getElementById('avatar-btn');
             const removeAvatarBtn = document.getElementById('remove-avatar-btn');
             const statusEl = document.getElementById('profile-status');
+            const registeredText = document.getElementById('registered-text');
 
             // 待保存的头像（选完图片先暂存，实时预览，点「使用头像」才上传）
             let pendingAvatar = null;
@@ -34,6 +35,13 @@
             }
 
             // ---------- 拉取当前资料 ----------
+            function formatRegisteredAt(ts) {
+                if (!ts) return null;
+                const d = new Date(ts);
+                if (isNaN(d.getTime())) return null;
+                return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+            }
+
             async function loadProfile() {
                 try {
                     const res = await fetch('/api/profile?id=' + encodeURIComponent(myId));
@@ -42,13 +50,17 @@
                         nameInput.value = data.name;
                         renderAvatar(data.avatar, data.name);
                         removeAvatarBtn.style.display = data.avatar ? 'inline' : 'none';
+                        const reg = formatRegisteredAt(data.registeredAt);
+                        registeredText.textContent = reg ? ('注册日期：' + reg) : '注册日期：未知';
                     } else {
                         nameInput.value = myName;
                         renderAvatar(null, myName);
+                        registeredText.textContent = '注册日期：未知';
                     }
                 } catch (e) {
                     nameInput.value = myName;
                     renderAvatar(null, myName);
+                    registeredText.textContent = '注册日期：未知';
                 }
             }
 
@@ -330,6 +342,23 @@
             border-color: #ffffff;
         }
 
+        .registered-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 2px 0;
+        }
+
+        .date-icon {
+            flex-shrink: 0;
+        }
+
+        .registered-text {
+            font-size: 14px;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
         .profile-status {
             min-height: 20px;
             font-size: 13px;
@@ -396,6 +425,20 @@
             <div class="name-row">
                 <input type="text" id="name-input" maxlength="16" placeholder="输入新的用户名" autocomplete="off">
                 <button type="button" class="action-btn" id="save-name-btn">保存</button>
+            </div>
+        </div>
+
+        <!-- 注册日期 -->
+        <div class="profile-section">
+            <div class="section-label">注册日期</div>
+            <div class="registered-row">
+                <svg class="date-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" stroke-width="1.5" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="16"></rect>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <line x1="8" y1="3" x2="8" y2="7"></line>
+                    <line x1="16" y1="3" x2="16" y2="7"></line>
+                </svg>
+                <span class="registered-text" id="registered-text">注册日期：加载中…</span>
             </div>
         </div>
 

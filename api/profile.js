@@ -27,7 +27,7 @@ async function findAccount(id) {
         });
         if (res.ok) {
             const acct = await res.json();
-            if (acct && typeof acct.hash === 'string') return { name: acct.name, hash: acct.hash };
+            if (acct && typeof acct.hash === 'string') return { name: acct.name, hash: acct.hash, ts: acct.ts };
         }
     } catch (e) {}
     return null;
@@ -99,7 +99,9 @@ export default async function handler(request, response) {
             // KV 没有则回退到环境变量里的初始名字
             const name = (profile && profile.name) || account.name || ('@' + id);
             const avatar = (profile && profile.avatar) || null;
-            return response.status(200).json({ ok: true, name: name, avatar: avatar });
+            // 注册日期：注册时写入 user:<id> 的 ts 时间戳（老硬编码账号无此字段）
+            const registeredAt = (typeof account.ts === 'number' && account.ts > 0) ? account.ts : null;
+            return response.status(200).json({ ok: true, name: name, avatar: avatar, registeredAt: registeredAt });
         }
 
         if (request.method === 'POST') {

@@ -3,255 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>index</title>
+    <title>wangwang-momo</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.querySelector('.search-input');
-            const searchForm = document.querySelector('.search-form');
-            let suggestions = null;
-            let debounceTimer = null;
-            let latestRequestId = 0;
-
-            // 获取百度搜索建议
-            // 注意：sugrec 接口不带 CORS 响应头，普通 fetch 会被浏览器拦截，
-            // 必须走 JSONP（script 标签）方式请求。
-            function fetchBaiduSuggestions(query) {
-                return new Promise((resolve) => {
-                    const callbackName = 'callback_' + Math.random().toString(36).slice(2, 11);
-                    const script = document.createElement('script');
-                    script.src = `https://www.baidu.com/sugrec?json=1&prod=pc&wd=${encodeURIComponent(query)}&cb=${callbackName}`;
-                    let settled = false;
-
-                    function cleanup() {
-                        settled = true;
-                        delete window[callbackName];
-                        if (script.parentNode) {
-                            script.parentNode.removeChild(script);
-                        }
-                    }
-
-                    window[callbackName] = function(data) {
-                        if (settled) return;
-                        cleanup();
-
-                        if (data && data.g && data.g.length > 0) {
-                            const items = data.g
-                                .filter(item => item.q && typeof item.q === 'string')
-                                .map(item => item.q);
-
-                            // 百度会混入热门/推广性质的联想词，和输入内容无关，
-                            // 只保留包含原始输入的建议，让下拉列表更"贴合"输入
-                            const lowerQuery = query.toLowerCase();
-                            const related = items.filter(s => s.toLowerCase().includes(lowerQuery));
-
-                            resolve(related.length > 0 ? related.slice(0, 5) : items.slice(0, 3));
-                        } else {
-                            resolve([]);
-                        }
-                    };
-
-                    script.onerror = function() {
-                        if (settled) return;
-                        cleanup();
-                        resolve([]);
-                    };
-
-                    document.head.appendChild(script);
-
-                    // 5秒超时
-                    setTimeout(() => {
-                        if (!settled) {
-                            cleanup();
-                            resolve([]);
-                        }
-                    }, 5000);
-                });
-            }
-
-            searchInput.addEventListener('input', function(e) {
-                const value = e.target.value.trim();
-
-                // 防抖处理
-                clearTimeout(debounceTimer);
-                if (value.length > 0) {
-                    debounceTimer = setTimeout(() => {
-                        showSuggestions(value);
-                    }, 300);
-                } else {
-                    // 输入清空后，聚焦状态下显示历史记录
-                    if (document.activeElement === searchInput) {
-                        showHistory();
-                    } else {
-                        hideSuggestions();
-                    }
-                }
-            });
-
-            // 聚焦时：输入框为空则显示历史
-            searchInput.addEventListener('focus', function() {
-                if (searchInput.value.trim().length === 0) {
-                    showHistory();
-                }
-            });
-
-            searchInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    hideSuggestions();
-                }
-            });
-
-            searchInput.addEventListener('blur', function() {
-                setTimeout(() => hideSuggestions(), 200);
-            });
-
-            // 提交搜索时记录历史
-            searchForm.addEventListener('submit', function() {
-                saveHistory(searchInput.value.trim());
-            });
-
-            async function showSuggestions(query) {
-                hideSuggestions();
-                const requestId = ++latestRequestId;
-
-                try {
-                    // 直接获取百度智能建议
-                    const suggestionsData = await getSmartSuggestions(query);
-
-                    // 防止旧请求的响应覆盖新输入的结果
-                    if (requestId !== latestRequestId) return;
-
-                    if (suggestionsData && suggestionsData.length > 0) {
-                        displaySuggestions(suggestionsData);
-                    }
-                } catch (error) {
-                    console.error('显示建议时出错', error);
-                }
-            }
-
-            // 显示建议
-            function displaySuggestions(suggestionsData) {
-                if (suggestionsData && suggestionsData.length > 0) {
-                    suggestions = document.createElement('div');
-                    suggestions.className = 'suggestions';
-
-                    suggestionsData.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = 'suggestion-item';
-                        div.textContent = item;
-                        div.addEventListener('click', function() {
-                            const oldValue = searchInput.value;
-                            searchInput.style.transition = 'opacity 0.3s ease';
-                            searchInput.style.opacity = '0';
-
-                            setTimeout(() => {
-                                searchInput.value = item;
-                                searchInput.style.transition = 'opacity 0.3s ease';
-                                searchInput.style.opacity = '1';
-                                hideSuggestions();
-                            }, 300);
-                        });
-                        suggestions.appendChild(div);
-                    });
-
-                    searchForm.style.position = 'relative';
-                    searchForm.appendChild(suggestions);
-                }
-            }
-
-            // 智能建议生成器（使用百度API）
-            function getSmartSuggestions(query) {
-                return fetchBaiduSuggestions(query);
-            }
-
-            // ==================== 本地搜索历史 ====================
-            const HISTORY_KEY = 'searchHistory';
-            const HISTORY_MAX = 10;
-
-            function getHistory() {
-                try {
-                    const data = JSON.parse(localStorage.getItem(HISTORY_KEY));
-                    return Array.isArray(data) ? data.filter(s => typeof s === 'string') : [];
-                } catch (e) {
-                    return [];
-                }
-            }
-
-            function saveHistory(query) {
-                if (!query) return;
-                let history = getHistory();
-                // 重复的词提到顶部，不重复占位
-                history = history.filter(s => s !== query);
-                history.unshift(query);
-                history = history.slice(0, HISTORY_MAX);
-                try {
-                    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-                } catch (e) { /* 存储失败（如隐私模式）静默忽略 */ }
-            }
-
-            function clearHistory() {
-                try {
-                    localStorage.removeItem(HISTORY_KEY);
-                } catch (e) { /* 忽略 */ }
-                hideSuggestions();
-            }
-
-            // 显示历史记录（复用建议下拉框的样式）
-            function showHistory() {
-                hideSuggestions();
-                const history = getHistory();
-                if (history.length === 0) return;
-
-                suggestions = document.createElement('div');
-                suggestions.className = 'suggestions';
-
-                history.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'suggestion-item history-item';
-
-                    // 左侧小历史图标（极简线条风）
-                    const icon = document.createElement('span');
-                    icon.className = 'history-icon';
-                    icon.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
-                    div.appendChild(icon);
-
-                    const label = document.createElement('span');
-                    label.textContent = item;
-                    div.appendChild(label);
-
-                    div.addEventListener('click', function() {
-                        // 按用户偏好：仅填入搜索框，不直接搜索
-                        searchInput.style.transition = 'opacity 0.3s ease';
-                        searchInput.style.opacity = '0';
-                        setTimeout(() => {
-                            searchInput.value = item;
-                            searchInput.style.opacity = '1';
-                            hideSuggestions();
-                            searchInput.focus();
-                        }, 300);
-                    });
-                    suggestions.appendChild(div);
-                });
-
-                // 底部"清空历史"按钮
-                const clearDiv = document.createElement('div');
-                clearDiv.className = 'history-clear';
-                clearDiv.textContent = '清空历史';
-                clearDiv.addEventListener('click', clearHistory);
-                suggestions.appendChild(clearDiv);
-
-                searchForm.style.position = 'relative';
-                searchForm.appendChild(suggestions);
-            }
-
-            function hideSuggestions() {
-                if (suggestions) {
-                    suggestions.remove();
-                    suggestions = null;
-                }
-            }
-        });
-    </script>
     <style>
         * {
             margin: 0;
@@ -260,324 +13,128 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
             background: #000000;
             font-family: Arial, sans-serif;
         }
 
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .logo {
-              font-size: 72px;
-              font-weight: 700;
-              font-style: italic;
-              margin-bottom: 30px;
-              color: #ffffff;
-              font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
-              letter-spacing: 1px;
-              text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
-              position: relative;
-              display: inline-block;
-              line-height: 1;
-          }
-
-        .version {
-            font-size: 14px;
-            color: #ffffff;
-            font-weight: 300;
-            letter-spacing: 1px;
-            position: absolute;
-            bottom: -10px;
-            right: -35px;
-        }
-
-        /* 搜索栏下方的 Static 入口 */
-        .static-entry {
-            margin-top: 28px;
-            font-size: 72px;
-            font-weight: 700;
-            font-style: italic;
-            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
-            letter-spacing: 1px;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
-            line-height: 1;
-            color: #ffffff;
-            text-decoration: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .static-entry:hover {
-            opacity: 0.6;
-        }
-
-        .search-container {
-            width: 100%;
-            max-width: 584px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .search-form {
-            display: flex;
-            width: 100%;
-            border-radius: 24px;
-            border: 1px solid #404040;
-            padding: 2px;
-            background: #000000;
-            box-shadow: 0 2px 8px rgba(255,255,255,0.1);
-            transition: all 0.3s ease;
-        }
-
-        .search-form:hover {
-            box-shadow: 0 4px 12px rgba(255,255,255,0.15);
-            border-color: #505050;
-        }
-
-        .search-input {
-            flex: 1;
-            border: none;
-            outline: none;
-            padding: 14px 20px;
-            font-size: 16px;
-            background: transparent;
-            color: #ffffff;
-        }
-
-        .search-input::placeholder {
-            color: #666666;
-        }
-
-        .search-input:focus {
-            outline: none;
-        }
-
-        .suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #000000;
-            border: 1px solid #333333;
-            border-radius: 8px;
-            margin-top: 2px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            z-index: 1000;
-            max-height: 300px;
-            overflow: hidden;
-        }
-
-        .suggestion-item {
-            padding: 10px 20px;
-            color: #ffffff;
-            cursor: pointer;
-            font-size: 14px;
-            position: relative;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: clip;
-        }
-
-        .suggestion-item:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 20px;
-            right: 20px;
-            height: 1px;
-            background: #ffffff;
-        }
-
-        /* 历史记录条目 */
-        .history-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .history-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 14px;
-            height: 14px;
+        /* 顶部提示语 */
+        .select-hint {
+            text-align: center;
+            padding: 28px 16px 0;
             flex-shrink: 0;
         }
 
-        .history-icon svg {
-            width: 14px;
-            height: 14px;
-            stroke: #666666;
-            stroke-width: 1.5;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
-        }
-
-        .history-clear {
-            padding: 8px 20px;
-            font-size: 12px;
-            color: #666666;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .history-clear:hover {
-            color: #ffffff;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .copyright {
-            font-size: 14px;
-            color: #888888;
-            font-style: italic;
-            font-weight: bold;
-            line-height: 1.5;
-        }
-
-        .copyright-en {
-            margin-bottom: 5px;
-        }
-
-        .copyright-zh {
-            margin-bottom: 5px;
-        }
-
-/* 百度建议列表的动画效果 */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .suggestion-item {
-            animation: fadeInUp 0.3s ease-out;
-            animation-fill-mode: both;
-        }
-
-        .suggestion-item:nth-child(1) { animation-delay: 0.05s; }
-        .suggestion-item:nth-child(2) { animation-delay: 0.1s; }
-        .suggestion-item:nth-child(3) { animation-delay: 0.15s; }
-        .suggestion-item:nth-child(4) { animation-delay: 0.2s; }
-        .suggestion-item:nth-child(5) { animation-delay: 0.25s; }
-
-        .engine-credit {
-            font-size: 12px;
-            color: #666666;
-            margin-top: 10px;
-        }
-
-        /* 右上角更新日志入口 */
-        .changelog-link {
-            position: fixed;
-            top: 16px;
-            right: 20px;
+        .select-hint span {
             font-size: 13px;
-            color: #ffffff;
+            color: #888888;
+            letter-spacing: 3px;
+        }
+
+        /* 上下两半屏 */
+        .half {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 24px;
             text-decoration: none;
-            letter-spacing: 0.5px;
-            transition: opacity 0.3s ease;
-            z-index: 1000;
+            transition: background 0.3s ease;
         }
 
-        .changelog-link:hover {
-            opacity: 0.7;
+        .half:hover {
+            background: #0a0a0a;
         }
 
-        /* 手机端适配 */
+        /* 中间的白色横线 */
+        .divider {
+            height: 1px;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+
+        /* 模块矩形框 */
+        .module-box {
+            border: 1px solid #ffffff;
+            padding: 18px 56px;
+            transition: all 0.3s ease;
+        }
+
+        .module-box span {
+            font-size: 34px;
+            font-weight: 700;
+            font-style: italic;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+        }
+
+        .half:hover .module-box {
+            background: #ffffff;
+        }
+
+        .half:hover .module-box span {
+            color: #000000;
+        }
+
+        /* 框下的说明 */
+        .module-desc {
+            margin-top: 18px;
+            font-size: 13px;
+            color: #888888;
+            line-height: 1.7;
+            text-align: center;
+            max-width: 340px;
+        }
+
         @media (max-width: 768px) {
-              .logo {
-                  font-size: 54px;
-                  margin-bottom: 20px;
-                  position: relative;
-                  display: inline-block;
-                  letter-spacing: 0.5px;
-              }
-
-            .search-container {
-                width: 90%;
+            .select-hint {
+                padding: 20px 16px 0;
             }
 
-            .static-entry {
-                font-size: 54px;
-                margin-top: 22px;
+            .select-hint span {
+                font-size: 11px;
+                letter-spacing: 2px;
             }
 
-            .search-form {
-                border-radius: 50px;
-                padding: 2px;
+            .module-box {
+                padding: 14px 40px;
             }
 
-            .search-input {
-                font-size: 18px;
-                padding: 16px 24px;
+            .module-box span {
+                font-size: 26px;
             }
 
-            .search-input::placeholder {
-                color: #666666;
-            }
-
-            .footer {
-                padding: 15px 20px;
-            }
-
-            .copyright {
+            .module-desc {
+                margin-top: 14px;
                 font-size: 12px;
-                line-height: 1.4;
-            }
-
-            .engine-credit {
-                font-size: 11px;
-                color: #666666;
-                margin-top: 8px;
-            }
-
-            .changelog-link {
-                top: 10px;
-                right: 12px;
-                font-size: 11px;
+                max-width: 280px;
             }
         }
     </style>
 </head>
 <body>
-    <a class="changelog-link" href="changelog.html" target="_blank">更新日志</a>
+    <div class="select-hint"><span>请选择您想要使用的模块</span></div>
 
-    <div class="main-content">
-        <div class="logo">index<span class="version">v0.0.2</span></div>
+    <a class="half" href="search.html">
+        <div class="module-box"><span>index</span></div>
+        <div class="module-desc">基于 Microsoft Bing 的搜索窗口</div>
+    </a>
 
-        <div class="search-container">
-            <form class="search-form" action="https://cn.bing.com/search" method="GET">
-                <input type="text" class="search-input" name="q" placeholder="搜索" autocomplete="off">
-            </form>
+    <div class="divider"></div>
 
-            <a class="static-entry" href="login.html">Static</a>
-        </div>
-    </div>
-
-    <div class="footer">
-        <div class="copyright copyright-en">Copyright &copy; 2026 Ren Jifeng &amp; Wang Ziwen. All rights reserved.</div>
-        <div class="copyright copyright-zh">版权所有 &copy; 2026 任继锋、汪子雯 保留所有权利。</div>
-        <div class="engine-credit">Powered by Bing</div>
-    </div>
+    <a class="half" href="login.html">
+        <div class="module-box"><span>Static</span></div>
+        <div class="module-desc">面向注册成员的加密通讯模块。消息经端到端加密传输与存储，仅对话双方可见。</div>
+    </a>
 </body>
 </html>

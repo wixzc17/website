@@ -76,7 +76,8 @@ export default async function handler(request, response) {
                 model: 'glm-4.7-flash',
                 messages: clean,
                 temperature: 0.7,
-                max_tokens: 1024
+                max_tokens: 2048,
+                thinking: { type: 'disabled' }  // 关闭思考模式，避免回复被推理内容占满
             })
         });
 

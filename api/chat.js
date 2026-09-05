@@ -1,16 +1,20 @@
 // Static 消息读写接口
 // 消息以密文形式存储在 Cloudflare KV，服务器永远见不到明文
 //
-// POST /api/chat  { token, to, ciphertext }   发送消息
-// GET  /api/chat?token=xxx&peer=xxx           拉取消息
+// POST   /api/chat  { token, to, ciphertext }   发送消息
+// GET    /api/chat?token=xxx&peer=xxx           拉取消息（自动过滤自己删过的）
+// DELETE /api/chat?token=xxx&peer=xxx&mid=xxx   删除消息（仅对自己隐藏，对方不受影响）
+//
+// 消息条目格式：{ id, from, ct, ts, hid: [用户ID...] }
+//   hid = 已删除此消息（对自己隐藏）的用户名单
 //
 // token 是登录后由 /api/login 签发的会话凭证
 
 import crypto from 'crypto';
 
 export default async function handler(request, response) {
-    // CORS 不需要（同源），只接受 POST 和 GET
-    if (request.method !== 'POST' && request.method !== 'GET') {
+    // CORS 不需要（同源），只接受 POST、GET 和 DELETE
+    if (request.method !== 'POST' && request.method !== 'GET' && request.method !== 'DELETE') {
         return response.status(405).json({ ok: false, message: '方法不允许' });
     }
 
@@ -50,6 +54,16 @@ export default async function handler(request, response) {
     // 两人会话的唯一 key（排序保证双方一致）
     function convoKey(a, b) {
         return 'dm:' + [a, b].sort().join('_');
+    }
+
+    // 消息唯一 ID：旧消息没有 id，用确定性规则补（from+ts），保证删除时能对上
+    function entryId(e) {
+        return e.id || ('L' + e.from + '_' + e.ts);
+    }
+
+    // 新消息 ID
+    function newId() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
 
     // 读 KV 中的消息列表
@@ -123,11 +137,41 @@ export default async function handler(request, response) {
             }
 
             // 每个会话最多保留 500 条，防止无限增长
-            const entry = { from: session.id, ct: ciphertext, ts: Date.now() };
+            const entry = { id: newId(), from: session.id, ct: ciphertext, ts: Date.now(), hid: [] };
             messages.push(entry);
             const trimmed = messages.slice(-500);
 
             await writeMessages(key, trimmed);
+            return response.status(200).json({ ok: true });
+
+        } else if (request.method === 'DELETE') {
+            // DELETE：删除消息（把当前用户加进 hid 名单，仅对自己隐藏）
+            const url = new URL(request.url, 'https://x.local');
+            const token = url.searchParams.get('token') || '';
+            const peer = (url.searchParams.get('peer') || '').toString().trim().replace(/^@/, '');
+            const mid = (url.searchParams.get('mid') || '').toString();
+
+            const session = parseToken(token);
+            if (!session) {
+                return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
+            }
+            if (!/^[a-zA-Z0-9]+$/.test(peer) || !/^[A-Za-z0-9_-]+$/.test(mid)) {
+                return response.status(400).json({ ok: false, message: '参数不合法' });
+            }
+
+            const key = convoKey(session.id, peer);
+            const messages = await readMessages(key);
+            if (messages === null) {
+                return response.status(500).json({ ok: false, message: '存储暂时不可用' });
+            }
+
+            const entry = messages.find(e => entryId(e) === mid);
+            if (entry) {
+                if (!Array.isArray(entry.hid)) entry.hid = [];
+                if (!entry.hid.includes(session.id)) entry.hid.push(session.id);
+                await writeMessages(key, messages);
+            }
+            // 没找到也返回 ok（幂等：可能已被自己删过）
             return response.status(200).json({ ok: true });
 
         } else {
@@ -150,8 +194,11 @@ export default async function handler(request, response) {
                 return response.status(500).json({ ok: false, message: '存储暂时不可用' });
             }
 
-            // 只返回格式合法的条目
-            const clean = messages.filter(validEntry);
+            // 只返回格式合法且未被当前用户删除的条目（附上消息 id，hid 不外泄）
+            const clean = messages
+                .filter(validEntry)
+                .filter(e => !(Array.isArray(e.hid) && e.hid.includes(session.id)))
+                .map(e => ({ id: entryId(e), from: e.from, ct: e.ct, ts: e.ts }));
             return response.status(200).json({ ok: true, messages: clean });
         }
     } catch (e) {

@@ -96,19 +96,40 @@
                 return el;
             }
 
-            function renderMessages(messages) {
-                const fingerprint = messages.length + ':' + (messages[messages.length - 1] ? messages[messages.length - 1].ts : 0);
+            // mid → 解密后的消息（菜单操作用）
+            let msgById = {};
+
+            // 消息明文里引用前缀「> @xxx: ...\n」的解析：返回 {quote, body}
+            function splitQuote(text) {
+                if (typeof text !== 'string' || !text.startsWith('> ')) return { quote: null, body: text };
+                const nl = text.indexOf('\n');
+                if (nl === -1) return { quote: text.slice(2), body: '' };
+                return { quote: text.slice(2, nl), body: text.slice(nl + 1) };
+            }
+
+            async function renderMessages(messages) {
+                const last = messages[messages.length - 1];
+                const fingerprint = messages.length + ':' + (last ? last.ts : 0) + ':' + (last ? last.id : '');
                 if (fingerprint === rendered) return;
                 rendered = fingerprint;
 
+                // 先解密全部再渲染（复制/引用需要明文就绪，也消除头像/文字竞态）
+                const decoded = await Promise.all(messages.map(async m => {
+                    const text = await StaticCrypto.decrypt(key, m.ct);
+                    return { id: m.id, from: m.from, ts: m.ts, text: text };
+                }));
+
+                msgById = {};
                 messagesEl.innerHTML = '';
-                messages.forEach((m, idx) => {
+                decoded.forEach((m, idx) => {
+                    msgById[m.id] = m;
                     const isMine = m.from === myId;
                     const row = document.createElement('div');
                     row.className = 'msg-row ' + (isMine ? 'mine' : 'theirs');
+                    row.dataset.mid = m.id;
 
                     // 连续消息：去白线，头像下挂灰色竖线连到下一条
-                    const next = messages[idx + 1];
+                    const next = decoded[idx + 1];
                     if (next && next.from === m.from) {
                         row.classList.add('continued');
                     }
@@ -119,18 +140,22 @@
                     const col = document.createElement('div');
                     col.className = 'msg-col';
 
+                    // 引用行 + 正文
+                    const parts = splitQuote(m.text);
+                    if (parts.quote !== null) {
+                        const qEl = document.createElement('div');
+                        qEl.className = 'msg-quote';
+                        qEl.textContent = parts.quote;
+                        col.appendChild(qEl);
+                    }
                     const textEl = document.createElement('div');
                     textEl.className = 'msg-text';
-
-                    // 解密（异步，但不改变 DOM 顺序）
-                    StaticCrypto.decrypt(key, m.ct).then(text => {
-                        if (text === null) {
-                            textEl.textContent = '[无法解密的消息]';
-                            textEl.classList.add('undecryptable');
-                        } else {
-                            textEl.textContent = text;
-                        }
-                    });
+                    if (m.text === null) {
+                        textEl.textContent = '[无法解密的消息]';
+                        textEl.classList.add('undecryptable');
+                    } else {
+                        textEl.textContent = parts.body;
+                    }
 
                     // 时间戳：月/日 时:分
                     const timeEl = document.createElement('div');
@@ -142,12 +167,125 @@
                     col.appendChild(textEl);
                     col.appendChild(timeEl);
                     row.appendChild(col);
+
+                    // 桌面端：悬停显示 ⋯ 按钮（点开操作菜单）
+                    const moreBtn = document.createElement('button');
+                    moreBtn.type = 'button';
+                    moreBtn.className = 'msg-more';
+                    moreBtn.textContent = '⋯';
+                    moreBtn.title = '消息操作';
+                    moreBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openMsgMenu(row, m);
+                    });
+                    row.appendChild(moreBtn);
+
                     messagesEl.appendChild(row);
                 });
 
                 // 滚到底部
                 messagesEl.scrollTop = messagesEl.scrollHeight;
             }
+
+            // ---------- 消息操作菜单（复制 / 引用 / 删除） ----------
+            const msgMenu = document.getElementById('msg-menu');
+            let menuTarget = null;
+
+            function openMsgMenu(row, m) {
+                menuTarget = m;
+                msgMenu.classList.add('show');
+                const r = row.getBoundingClientRect();
+                const mw = 96, mh = 108;
+                let x = (row.classList.contains('mine')) ? r.left : r.right - mw;
+                let y = Math.min(r.top, window.innerHeight - mh - 8);
+                msgMenu.style.left = Math.max(8, Math.min(x, window.innerWidth - mw - 8)) + 'px';
+                msgMenu.style.top = Math.max(8, y) + 'px';
+            }
+
+            function closeMsgMenu() {
+                msgMenu.classList.remove('show');
+                menuTarget = null;
+            }
+
+            msgMenu.addEventListener('click', async function(e) {
+                const btn = e.target.closest('button');
+                if (!btn || !menuTarget) return;
+                const act = btn.dataset.act;
+                const m = menuTarget;
+                closeMsgMenu();
+
+                if (act === 'copy') {
+                    const parts = splitQuote(m.text);
+                    const text = parts.quote !== null ? parts.body : m.text;
+                    try {
+                        await navigator.clipboard.writeText(text || '');
+                    } catch (err) {
+                        // 旧浏览器回退
+                        const ta = document.createElement('textarea');
+                        ta.value = text || '';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        try { document.execCommand('copy'); } catch (e2) {}
+                        ta.remove();
+                    }
+                } else if (act === 'quote') {
+                    const parts = splitQuote(m.text);
+                    const text = (parts.quote !== null ? parts.body : m.text) || '';
+                    const snippet = text.length > 40 ? text.slice(0, 40) + '…' : text;
+                    setQuote('@' + m.from + ': ' + snippet);
+                    inputEl.focus();
+                } else if (act === 'del') {
+                    try {
+                        const res = await fetch('/api/chat?token=' + encodeURIComponent(myToken) +
+                            '&peer=' + encodeURIComponent(peerId) + '&mid=' + encodeURIComponent(m.id), { method: 'DELETE' });
+                        const data = await res.json();
+                        if (data.ok) {
+                            fetchMessages(); // 立即刷新（自己这边就看不见了）
+                        } else {
+                            statusEl.textContent = data.message || '删除失败';
+                        }
+                    } catch (err) {
+                        statusEl.textContent = '网络异常，删除失败';
+                    }
+                }
+            });
+
+            // 点空白处关菜单
+            document.addEventListener('click', function(e) {
+                if (!msgMenu.contains(e.target) && !e.target.closest('.msg-more')) closeMsgMenu();
+            });
+
+            // 移动端：长按消息呼出菜单
+            let lpTimer = null;
+            messagesEl.addEventListener('touchstart', function(e) {
+                const row = e.target.closest('.msg-row');
+                if (!row) return;
+                const mid = row.dataset.mid;
+                lpTimer = setTimeout(function() {
+                    const m = msgById[mid];
+                    if (m) openMsgMenu(row, m);
+                }, 500);
+            }, { passive: true });
+            ['touchmove', 'touchend', 'touchcancel'].forEach(function(ev) {
+                messagesEl.addEventListener(ev, function() { clearTimeout(lpTimer); }, { passive: true });
+            });
+
+            // ---------- 引用条（输入框上方） ----------
+            const quoteBar = document.getElementById('quote-bar');
+            const quoteTextEl = document.getElementById('quote-text');
+            const quoteCancel = document.getElementById('quote-cancel');
+            let pendingQuote = null; // 引用前缀字符串，如「> @wixzc17: xxx」
+
+            function setQuote(prefix) {
+                pendingQuote = prefix;
+                quoteTextEl.textContent = prefix;
+                quoteBar.style.display = 'flex';
+            }
+            function clearQuote() {
+                pendingQuote = null;
+                quoteBar.style.display = 'none';
+            }
+            quoteCancel.addEventListener('click', clearQuote);
 
             // ---------- 拉取消息（2秒轮询） ----------
             async function fetchMessages() {
@@ -177,9 +315,12 @@
                 const text = inputEl.value.trim();
                 if (!text) return;
 
+                // 有引用时拼前缀：> @xxx: 引用内容\n正文（密文里带上，双方都能解出）
+                const plaintext = pendingQuote ? ('> ' + pendingQuote + '\n' + text) : text;
+
                 sendBtn.disabled = true;
                 try {
-                    const ciphertext = await StaticCrypto.encrypt(key, text);
+                    const ciphertext = await StaticCrypto.encrypt(key, plaintext);
                     const res = await fetch('/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -188,6 +329,7 @@
                     const data = await res.json();
                     if (data.ok) {
                         inputEl.value = '';
+                        clearQuote();
                         fetchMessages(); // 立即刷新
                     } else {
                         statusEl.textContent = data.message || '发送失败';
@@ -492,6 +634,123 @@
             font-size: 10px;
             color: #888888;
             margin-top: 4px;
+        }
+
+        /* 引用行：正文上方灰色小字 */
+        .msg-quote {
+            font-size: 12px;
+            color: #888888;
+            border-left: 2px solid #404040;
+            padding-left: 8px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        /* 桌面端悬停 ⋯ 按钮 */
+        .msg-more {
+            position: absolute;
+            top: 10px;
+            background: none;
+            border: none;
+            color: #888888;
+            font-size: 16px;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            cursor: pointer;
+            padding: 0 6px;
+            opacity: 0;
+            transition: opacity 0.2s ease, color 0.2s ease;
+        }
+
+        .msg-row.theirs .msg-more {
+            right: 4px;
+        }
+
+        .msg-row.mine .msg-more {
+            left: 4px;
+        }
+
+        .msg-row {
+            position: relative;
+        }
+
+        @media (hover: hover) {
+            .msg-row:hover .msg-more {
+                opacity: 1;
+            }
+
+            .msg-more:hover {
+                color: #ffffff;
+            }
+        }
+
+        /* 消息操作菜单 */
+        .msg-menu {
+            position: fixed;
+            width: 96px;
+            background: #000000;
+            border: 1px solid #ffffff;
+            z-index: 4000;
+            display: none;
+        }
+
+        .msg-menu.show {
+            display: block;
+        }
+
+        .msg-menu button {
+            display: block;
+            width: 100%;
+            background: none;
+            border: none;
+            border-bottom: 1px solid #404040;
+            color: #ffffff;
+            font-size: 13px;
+            font-family: inherit;
+            padding: 10px 0;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .msg-menu button:last-child {
+            border-bottom: none;
+        }
+
+        .msg-menu button:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        /* 引用条（输入框上方） */
+        .quote-bar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 16px 0;
+            border-left: 2px solid #ffffff;
+            padding-left: 10px;
+        }
+
+        .quote-text {
+            flex: 1;
+            font-size: 12px;
+            color: #888888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .quote-cancel {
+            background: none;
+            border: none;
+            color: #888888;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .quote-cancel:hover {
+            color: #ffffff;
         }
 
         .chat-input-bar {
@@ -914,7 +1173,19 @@
 
     <div class="messages" id="messages"></div>
 
+    <!-- 消息操作菜单（复制 / 引用 / 删除） -->
+    <div class="msg-menu" id="msg-menu">
+        <button type="button" data-act="copy">复制</button>
+        <button type="button" data-act="quote">引用</button>
+        <button type="button" data-act="del">删除</button>
+    </div>
+
     <div class="conn-status" id="conn-status"></div>
+
+    <div class="quote-bar" id="quote-bar">
+        <span class="quote-text" id="quote-text"></span>
+        <button class="quote-cancel" id="quote-cancel" type="button">&times;</button>
+    </div>
 
     <div class="chat-input-bar">
         <input type="text" class="msg-input" id="msg-input" placeholder="" autocomplete="off" maxlength="2000">

@@ -134,16 +134,7 @@
                 });
             });
 
-            // 退出登录（同时清除本设备的自动登录记忆）
-            document.getElementById('logout-btn').addEventListener('click', function() {
-                sessionStorage.clear();
-                try {
-                    localStorage.removeItem('static_remember_id');
-                    localStorage.removeItem('static_remember_hash');
-                } catch (e) {}
-                window.location.href = 'index.html';
-            });
-            // 侧边栏里的退出登录（同一个逻辑，点完先收起侧边栏）
+            // 退出登录（侧边栏里，同时清除本设备的自动登录记忆）
             document.getElementById('logout-sidebar-btn').addEventListener('click', function() {
                 closeSidebar();
                 sessionStorage.clear();

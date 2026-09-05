@@ -174,14 +174,15 @@
                 if (e.key === 'Enter') doSearch();
             });
 
-            // ---------- 下拉阻尼回弹（内容不满屏时也有橡皮筋手感） ----------
+            // ---------- 下拉阻尼回弹（只有联系人列表动，搜索框不动） ----------
             const scroller = document.querySelector('.static-content');
+            const contactList = document.getElementById('contact-list');
             let pullStartY = 0, pulling = false;
 
             scroller.addEventListener('touchstart', function(e) {
                 pulling = true;
                 pullStartY = e.touches[0].clientY;
-                scroller.style.transition = 'none';
+                contactList.style.transition = 'none';
             }, { passive: true });
 
             scroller.addEventListener('touchmove', function(e) {
@@ -190,7 +191,7 @@
                 if (dy > 0 && scroller.scrollTop <= 0) {
                     // 阻尼：位移随拉动距离递减，越拉越沉
                     const offset = Math.pow(dy, 0.75);
-                    scroller.style.transform = 'translateY(' + offset + 'px)';
+                    contactList.style.transform = 'translateY(' + offset + 'px)';
                     e.preventDefault();
                 }
             }, { passive: false });
@@ -198,8 +199,8 @@
             function springBack() {
                 if (!pulling) return;
                 pulling = false;
-                scroller.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
-                scroller.style.transform = '';
+                contactList.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
+                contactList.style.transform = '';
             }
             scroller.addEventListener('touchend', springBack);
             scroller.addEventListener('touchcancel', springBack);

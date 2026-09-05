@@ -425,6 +425,26 @@
             border-color: #ffffff;
         }
 
+        /* 右上角 prism 图标 */
+        .prism-entry {
+            position: fixed;
+            top: 64px;
+            right: 20px;
+            z-index: 1000;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        .prism-entry svg {
+            width: 44px;
+            height: 44px;
+            display: block;
+        }
+
+        .prism-entry:hover {
+            opacity: 0.7;
+        }
+
         .me-text {
             display: flex;
             flex-direction: column;
@@ -573,6 +593,16 @@
                 gap: 8px;
             }
 
+            .prism-entry {
+                top: 50px;
+                right: 12px;
+            }
+
+            .prism-entry svg {
+                width: 38px;
+                height: 38px;
+            }
+
             .me-avatar {
                 width: 38px;
                 height: 38px;
@@ -607,6 +637,23 @@
             <div class="me-name" id="me-name"></div>
             <div class="me-id" id="me-id"></div>
         </div>
+    </div>
+
+    <!-- 右上角 prism 入口 -->
+    <div class="prism-entry" title="prism" aria-label="prism">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+            <g stroke-linejoin="round" stroke-linecap="round">
+                <path d="M 256.00,256.00 L 89.72,160.00 L 256.00,64.00 L 422.28,160.00 Z" fill="#D9DEE4" stroke="none"/>
+                <path d="M 256.00,256.00 L 256.00,448.00 L 89.72,352.00 L 89.72,160.00 Z" fill="#7A818B" stroke="none"/>
+                <path d="M 256.00,256.00 L 422.28,160.00 L 422.28,352.00 L 256.00,448.00 Z" fill="#343A42" stroke="none"/>
+                <g stroke="#FFFFFF" stroke-width="18.0" fill="none">
+                    <line x1="256.00" y1="256.00" x2="89.72" y2="160.00"/>
+                    <line x1="256.00" y1="256.00" x2="422.28" y2="160.00"/>
+                    <line x1="256.00" y1="256.00" x2="256.00" y2="448.00"/>
+                </g>
+                <path d="M 256.00,64.00 L 422.28,160.00 L 422.28,352.00 L 256.00,448.00 L 89.72,352.00 L 89.72,160.00 Z" fill="none" stroke="#FFFFFF" stroke-width="22.0"/>
+            </g>
+        </svg>
     </div>
 
     <!-- 侧边栏（点头像弹出） -->

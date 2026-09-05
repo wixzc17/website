@@ -90,18 +90,25 @@
                 }
             });
 
-            // 码表：所有用户（初始硬编码 + KV 注册账号），从服务器拉取
+            // 码表：我的好友列表（来自 /api/contacts，先「添加好友」才会出现）
             const listEl = document.getElementById('contact-list');
 
             const cardEntries = []; // { card, name }，搜索时按名字匹配度重排
 
             let allIds = [];
             try {
-                const res = await fetch('/api/users?token=' + encodeURIComponent(myToken));
+                const res = await fetch('/api/contacts?token=' + encodeURIComponent(myToken));
                 const data = await res.json();
-                if (data.ok && Array.isArray(data.ids)) allIds = data.ids;
+                if (data.ok && Array.isArray(data.contacts)) allIds = data.contacts;
             } catch (e) {}
-            if (allIds.length === 0) allIds = ['wixzc17', 'lixs17']; // 拉取失败兜底
+
+            // 空状态：还没有好友时给出提示
+            if (allIds.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'add-empty';
+                empty.textContent = '还没有好友，点右上角 + 添加';
+                listEl.appendChild(empty);
+            }
 
             allIds.filter(id => id !== myId).forEach(id => {
                 const card = document.createElement('a');
@@ -345,6 +352,189 @@
                 if (e.key === 'Enter' && !e.isComposing) {
                     e.preventDefault();
                     prismSend();
+                }
+            });
+
+            // ---------- 添加好友浮窗 ----------
+            const addPanel = document.getElementById('add-panel');
+            const addOverlay = document.getElementById('add-overlay');
+            const addCloseBtn = document.getElementById('add-close');
+            const addSearchInput = document.getElementById('add-search');
+            const addSearchBtn = document.getElementById('add-search-btn');
+            const addSearchResults = document.getElementById('add-search-results');
+            const addIncoming = document.getElementById('add-incoming');
+            const addOutgoing = document.getElementById('add-outgoing');
+
+            function openAdd() {
+                closePrism();
+                addPanel.classList.add('open');
+                addOverlay.classList.add('show');
+                addSearchInput.value = '';
+                addSearchResults.innerHTML = '';
+                loadAddState();
+            }
+            function closeAdd() {
+                addPanel.classList.remove('open');
+                addOverlay.classList.remove('show');
+            }
+
+            document.querySelector('.add-entry').addEventListener('click', openAdd);
+            addOverlay.addEventListener('click', closeAdd);
+            addCloseBtn.addEventListener('click', closeAdd);
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') closeAdd();
+            });
+
+            // 拉取并渲染 收到的请求 + 已发送
+            async function loadAddState() {
+                try {
+                    const res = await fetch('/api/contacts?token=' + encodeURIComponent(myToken));
+                    const data = await res.json();
+                    if (!data.ok) return;
+                    renderIncoming(data.incoming || []);
+                    renderOutgoing(data.outgoing || []);
+                } catch (e) {}
+            }
+
+            // 构造一行用户（头像 + 名字/ID + 右侧操作区）
+            function makeUserRow(id, name, actionHtml) {
+                const row = document.createElement('div');
+                row.className = 'add-user-row';
+                const avatar = document.createElement('div');
+                avatar.className = 'add-user-avatar';
+                avatar.textContent = (name || '@' + id).charAt(0).toUpperCase();
+                const info = document.createElement('div');
+                info.className = 'add-user-info';
+                const nameEl = document.createElement('div');
+                nameEl.className = 'add-user-name';
+                nameEl.textContent = name || ('@' + id);
+                const idEl = document.createElement('div');
+                idEl.className = 'add-user-id';
+                idEl.textContent = '@' + id;
+                info.appendChild(nameEl);
+                info.appendChild(idEl);
+                row.appendChild(avatar);
+                row.appendChild(info);
+                const action = document.createElement('div');
+                action.className = 'add-user-action';
+                action.innerHTML = actionHtml;
+                row.appendChild(action);
+                return row;
+            }
+
+            function renderIncoming(incoming) {
+                addIncoming.innerHTML = '';
+                if (!incoming.length) {
+                    const empty = document.createElement('div');
+                    empty.className = 'add-empty';
+                    empty.textContent = '暂无';
+                    addIncoming.appendChild(empty);
+                    return;
+                }
+                incoming.forEach(req => {
+                    const from = req && req.from;
+                    if (!from) return;
+                    const row = makeUserRow(from, null,
+                        '<button class="add-action-btn" data-act="accept" data-id="' + from + '">同意</button>' +
+                        '<button class="add-action-btn" data-act="reject" data-id="' + from + '">拒绝</button>');
+                    addIncoming.appendChild(row);
+                });
+            }
+
+            function renderOutgoing(outgoing) {
+                addOutgoing.innerHTML = '';
+                if (!outgoing.length) {
+                    const empty = document.createElement('div');
+                    empty.className = 'add-empty';
+                    empty.textContent = '暂无';
+                    addOutgoing.appendChild(empty);
+                    return;
+                }
+                outgoing.forEach(id => {
+                    const row = makeUserRow(id, null, '<span style="font-size:12px;color:#666666">等待处理</span>');
+                    addOutgoing.appendChild(row);
+                });
+            }
+
+            // 处理收到的请求（同意 / 拒绝），事件委托
+            addIncoming.addEventListener('click', async function(e) {
+                const btn = e.target.closest('.add-action-btn');
+                if (!btn) return;
+                const act = btn.getAttribute('data-act');
+                const id = btn.getAttribute('data-id');
+                btn.disabled = true;
+                try {
+                    const res = await fetch('/api/contacts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, targetId: id, action: act })
+                    });
+                    if (res.status === 401) { window.location.href = 'login.html'; return; }
+                    await loadAddState();
+                    if (act === 'accept') location.reload();
+                } catch (e) { btn.disabled = false; }
+            });
+
+            // 搜索用户
+            async function doAddSearch() {
+                const q = addSearchInput.value.trim();
+                if (!q) return;
+                addSearchResults.innerHTML = '<div class="add-empty">搜索中…</div>';
+                try {
+                    const res = await fetch('/api/users?token=' + encodeURIComponent(myToken) + '&q=' + encodeURIComponent(q));
+                    const data = await res.json();
+                    if (res.status === 401) { window.location.href = 'login.html'; return; }
+                    if (!data.ok || !Array.isArray(data.users) || !data.users.length) {
+                        addSearchResults.innerHTML = '<div class="add-empty">没有找到匹配的用户</div>';
+                        return;
+                    }
+                    addSearchResults.innerHTML = '';
+                    data.users.forEach(u => {
+                        if (u.id === myId) return; // 不显示自己
+                        const row = makeUserRow(u.id, u.name,
+                            '<button class="add-action-btn" data-add="' + u.id + '">添加</button>');
+                        addSearchResults.appendChild(row);
+                    });
+                } catch (e) {
+                    addSearchResults.innerHTML = '<div class="add-empty">网络异常</div>';
+                }
+            }
+            addSearchBtn.addEventListener('click', doAddSearch);
+            addSearchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.isComposing) {
+                    e.preventDefault();
+                    doAddSearch();
+                }
+            });
+
+            // 发起好友请求
+            addSearchResults.addEventListener('click', async function(e) {
+                const btn = e.target.closest('[data-add]');
+                if (!btn) return;
+                const id = btn.getAttribute('data-add');
+                btn.disabled = true;
+                btn.textContent = '发送中…';
+                try {
+                    const res = await fetch('/api/contacts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, targetId: id })
+                    });
+                    if (res.status === 401) { window.location.href = 'login.html'; return; }
+                    const data = await res.json();
+                    if (data.ok) {
+                        if (data.matched) { btn.textContent = '已是好友'; location.reload(); }
+                        else if (data.already) { btn.textContent = '已是好友'; }
+                        else if (data.pending) { btn.textContent = '等待处理'; }
+                        else { btn.textContent = '已发送'; }
+                        await loadAddState();
+                    } else {
+                        btn.textContent = data.message || '失败';
+                        btn.disabled = false;
+                    }
+                } catch (e) {
+                    btn.textContent = '重试';
+                    btn.disabled = false;
                 }
             });
 
@@ -1013,6 +1203,255 @@
             cursor: not-allowed;
         }
 
+        /* ---------- 添加好友 ---------- */
+        .add-entry {
+            position: fixed;
+            top: 64px;
+            right: 78px;
+            z-index: 1000;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        .add-entry svg {
+            width: 44px;
+            height: 44px;
+            display: block;
+        }
+
+        .add-entry:hover {
+            opacity: 0.7;
+        }
+
+        .add-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 2999;
+        }
+
+        .add-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .add-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -46%);
+            width: min(480px, calc(100vw - 32px));
+            max-height: min(680px, calc(100vh - 96px));
+            display: flex;
+            flex-direction: column;
+            background: #000000;
+            border: 1px solid #404040;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 3000;
+        }
+
+        .add-panel.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%);
+        }
+
+        .add-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #262626;
+            flex-shrink: 0;
+        }
+
+        .add-head-icon {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+        }
+
+        .add-head-icon svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .add-head-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .add-head-name {
+            font-size: 15px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .add-head-id {
+            font-size: 11px;
+            color: #666666;
+        }
+
+        .add-close {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #888888;
+            font-size: 20px;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            cursor: pointer;
+            padding: 2px 8px;
+            transition: color 0.3s ease;
+        }
+
+        .add-close:hover {
+            color: #ffffff;
+        }
+
+        .add-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .add-search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .add-search-input {
+            flex: 1;
+            border: 1px solid #404040;
+            padding: 10px 14px;
+            font-size: 14px;
+            background: #000000;
+            color: #ffffff;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .add-search-input:focus {
+            border-color: #ffffff;
+        }
+
+        .add-search-input::placeholder {
+            color: #444444;
+        }
+
+        .add-search-btn {
+            border: 1px solid #404040;
+            padding: 8px 16px;
+            background: #000000;
+            color: #ffffff;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+
+        .add-search-btn:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .add-section-label {
+            font-size: 12px;
+            color: #666666;
+            letter-spacing: 2px;
+            margin: 18px 0 8px;
+            border-bottom: 1px solid #262626;
+            padding-bottom: 6px;
+        }
+
+        .add-user-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #262626;
+        }
+
+        .add-user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .add-user-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .add-user-name {
+            font-size: 14px;
+            color: #ffffff;
+        }
+
+        .add-user-id {
+            font-size: 12px;
+            color: #666666;
+        }
+
+        .add-user-action {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .add-action-btn {
+            border: 1px solid #404040;
+            background: #000000;
+            color: #ffffff;
+            font-size: 12px;
+            padding: 5px 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .add-action-btn:hover:not(:disabled) {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .add-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .add-empty {
+            font-size: 13px;
+            color: #666666;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .add-status {
+            font-size: 12px;
+            color: #888888;
+            text-align: center;
+            min-height: 16px;
+            margin-bottom: 6px;
+        }
+
         @media (max-width: 768px) {
             .static-content {
                 padding: 110px 16px 24px;
@@ -1036,6 +1475,16 @@
             }
 
             .prism-entry svg {
+                width: 38px;
+                height: 38px;
+            }
+
+            .add-entry {
+                top: 50px;
+                right: 60px;
+            }
+
+            .add-entry svg {
                 width: 38px;
                 height: 38px;
             }
@@ -1074,6 +1523,20 @@
             <div class="me-name" id="me-name"></div>
             <div class="me-id" id="me-id"></div>
         </div>
+    </div>
+
+    <!-- 右上角 添加好友 入口 -->
+    <div class="add-entry" title="添加好友" aria-label="添加好友">
+        <svg viewBox="0 0 1024 1024" fill="none" stroke="#FFFFFF" stroke-width="56" stroke-linecap="round" stroke-linejoin="round">
+            <g transform="translate(-42, 88)">
+                <circle cx="380" cy="320" r="96"/>
+                <path d="M216 556 A164 164 0 0 1 544 556"/>
+                <circle cx="668" cy="400" r="76"/>
+                <path d="M548 624 A120 120 0 0 1 788 624"/>
+                <path d="M800 158 V342"/>
+                <path d="M708 250 H892"/>
+            </g>
+        </svg>
     </div>
 
     <!-- 右上角 prism 入口 -->
@@ -1116,6 +1579,41 @@
                     <path d="M8 18 L8 2 M3 7 L8 2 L13 7"/>
                 </svg>
             </button>
+        </div>
+    </div>
+
+    <!-- 添加好友浮窗 -->
+    <div class="add-overlay" id="add-overlay"></div>
+    <div class="add-panel" id="add-panel">
+        <div class="add-head">
+            <div class="add-head-icon">
+                <svg viewBox="0 0 1024 1024" fill="none" stroke="#FFFFFF" stroke-width="56" stroke-linecap="round" stroke-linejoin="round">
+                    <g transform="translate(-42, 88)">
+                        <circle cx="380" cy="320" r="96"/>
+                        <path d="M216 556 A164 164 0 0 1 544 556"/>
+                        <circle cx="668" cy="400" r="76"/>
+                        <path d="M548 624 A120 120 0 0 1 788 624"/>
+                        <path d="M800 158 V342"/>
+                        <path d="M708 250 H892"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="add-head-text">
+                <div class="add-head-name">添加好友</div>
+                <div class="add-head-id">Add friend</div>
+            </div>
+            <button class="add-close" id="add-close" type="button">&times;</button>
+        </div>
+        <div class="add-body">
+            <div class="add-search-bar">
+                <input type="text" class="add-search-input" id="add-search" placeholder="搜索 ID 或昵称" autocomplete="off" maxlength="20">
+                <button type="button" class="add-search-btn" id="add-search-btn">搜索</button>
+            </div>
+            <div id="add-search-results"></div>
+            <div class="add-section-label">收到的请求</div>
+            <div id="add-incoming"></div>
+            <div class="add-section-label">已发送</div>
+            <div id="add-outgoing"></div>
         </div>
     </div>
 

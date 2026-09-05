@@ -14,8 +14,28 @@ const KV_HEADERS = {
     'Content-Type': 'application/json'
 };
 
+// 查找账号：STATIC_USERS（初始硬编码）优先，KV 注册账号（user:<id>）兜底
+// 返回 { name, hash } 或 null
+async function findAccount(id) {
+    let users = {};
+    try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) {}
+    if (users[id] && users[id].hash) return { name: users[id].name, hash: users[id].hash };
+
+    try {
+        const res = await fetch(KV_URL + encodeURIComponent('user:' + id), {
+            headers: { 'Authorization': KV_HEADERS.Authorization }
+        });
+        if (res.ok) {
+            const acct = await res.json();
+            if (acct && typeof acct.hash === 'string') return { name: acct.name, hash: acct.hash };
+        }
+    } catch (e) {}
+    return null;
+}
+
 // 验证会话 token（与 chat.js 相同的签名方案），返回 { id } 或 null
-function parseToken(token) {
+// 异步：KV 注册账号需要查 KV 才能拿到签名用的密码哈希
+async function parseToken(token) {
     if (!token || typeof token !== 'string' || token.length > 512) return null;
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -24,12 +44,10 @@ function parseToken(token) {
     const age = Date.now() - parseInt(ts, 10);
     if (age < 0 || age > 7 * 24 * 3600 * 1000) return null;
 
-    let users = {};
-    try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) { return null; }
-    const user = users[id];
-    if (!user || !user.hash) return null;
+    const account = await findAccount(id);
+    if (!account || !account.hash) return null;
 
-    const material = id + '.' + ts + '.' + user.hash + '.static-salt';
+    const material = id + '.' + ts + '.' + account.hash + '.static-salt';
     const expected = crypto.createHash('md5').update(material).digest('hex').slice(0, 16);
     if (sig !== expected) return null;
     return { id };
@@ -67,10 +85,9 @@ export default async function handler(request, response) {
                 return response.status(400).json({ ok: false, message: 'ID 不合法' });
             }
 
-            // 确认是注册用户（不向外人泄露任意 KV key 探测能力）
-            let users = {};
-            try { users = JSON.parse(process.env.STATIC_USERS || '{}'); } catch (e) {}
-            if (!users[id]) {
+            // 确认用户存在（初始硬编码账号或 KV 注册账号）
+            const account = await findAccount(id);
+            if (!account) {
                 return response.status(404).json({ ok: false, message: '用户不存在' });
             }
 
@@ -80,14 +97,14 @@ export default async function handler(request, response) {
             }
 
             // KV 没有则回退到环境变量里的初始名字
-            const name = (profile && profile.name) || users[id].name || ('@' + id);
+            const name = (profile && profile.name) || account.name || ('@' + id);
             const avatar = (profile && profile.avatar) || null;
             return response.status(200).json({ ok: true, name: name, avatar: avatar });
         }
 
         if (request.method === 'POST') {
             const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body;
-            const session = parseToken(body && body.token);
+            const session = await parseToken(body && body.token);
             if (!session) {
                 return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
             }

@@ -95,6 +95,25 @@
             max-width: 340px;
         }
 
+        /* 页尾声明 */
+        .site-footer {
+            text-align: center;
+            padding: 14px 16px 18px;
+            flex-shrink: 0;
+        }
+
+        .copyright {
+            font-size: 13px;
+            color: #888888;
+            font-style: italic;
+            font-weight: bold;
+            line-height: 1.6;
+        }
+
+        .copyright-zh {
+            margin-bottom: 4px;
+        }
+
         @media (max-width: 768px) {
             .select-hint {
                 padding: 20px 16px 0;
@@ -118,6 +137,11 @@
                 font-size: 12px;
                 max-width: 280px;
             }
+
+            .copyright {
+                font-size: 11px;
+                line-height: 1.5;
+            }
         }
     </style>
 </head>
@@ -138,6 +162,11 @@
             <div class="module-box"><span>Static</span></div>
         </a>
         <div class="module-desc">面向注册成员的加密通讯模块。消息经端到端加密传输与存储，仅对话双方可见。</div>
+    </div>
+
+    <div class="site-footer">
+        <div class="copyright copyright-zh">版权所有 &copy; 2026 任继锋、汪子雯 保留所有权利。</div>
+        <div class="copyright">Copyright &copy; 2026 Ren Jifeng &amp; Wang Ziwen. All rights reserved.</div>
     </div>
 </body>
 </html>

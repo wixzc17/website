@@ -447,8 +447,9 @@
             font-size: 13px;
             color: #666666;
             margin-top: 4px;
-            /* 同 user-name：只让文字本身可点 */
-            display: inline-block;
+            /* block + fit-content：既换行到用户名下方，又只让文字本身可点
+               （inline-block 会跟着认证框排在同一行） */
+            display: block;
             width: fit-content;
         }
 

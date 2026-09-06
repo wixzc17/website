@@ -3,29 +3,25 @@
 // 数据模型（Cloudflare KV）：
 //   label:<targetId>       →  { grantedBy, ts }         某账号被谁授予了标记
 //   labels-by:<grantedBy>  →  [targetId, ...]           反向索引：某企业授予过哪些账号
-//   labels:all             →  [{ targetId, grantedBy, ts }, ...]  全局索引（站长管理用）
 //
 // 规则：
-//   - 只有企业认证账号（verified:<id>.type === 'business'）能授予标记
-//   - 站长（wixzc17 / lixs17）可强制撤销任何标记
+//   - 只有企业认证账号（verified:<id>.type === 'business'）能授予/撤销标记
+//     （创始人 wixzc17/lixs17 在标记体系里只是普通个人用户，无特权）
 //   - 每账号最多 1 个标记；已有标记的账号不能被再次授予（需先撤销）
 //   - 目标不能是企业认证账号（避免双标记视觉冲突）
+//   - 撤销只能由授予方本人执行
 //
 // 接口：
 //   GET  /api/labels?ids=a,b,c
 //        公开批量查，返回 { ok, labels: { a: { grantedBy, ts, grantedByAvatar, grantedByName }, ... } }
-//   GET  /api/labels?by=<企业ID>&token=<企业自己的token>
+//   GET  /api/labels?by=<企业ID>&token=<该企业自己的token>
 //        企业查自己授予过的所有标记，返回 { ok, grantedBy, targets: [targetId, ...] }
-//        站长调用时 by 可以是任何企业 ID
-//   GET  /api/labels?all=1&token=<站长token>
-//        仅站长：返回全局标记列表 { ok, labels: [{ targetId, grantedBy, ts }, ...] }
+//        （仅该企业本人可查）
 //   POST /api/labels { token, targetId, action: 'grant' | 'revoke' }
 //        grant：企业认证账号给目标授予标记
-//        revoke：企业撤销自己授予的；站长可强制撤销任何
+//        revoke：授予方撤销自己授予的标记
 
 import crypto from 'crypto';
-
-const ADMINS = ['wixzc17', 'lixs17'];
 
 const KV_URL = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/`;
 const KV_AUTH = { 'Authorization': `Bearer ${process.env.CLOUDFLARE_KV_TOKEN}` };
@@ -129,44 +125,10 @@ export default async function handler(request, response) {
         if (!res.ok) throw new Error('KV write failed: ' + res.status);
     }
 
-    // 全局索引 labels:all → [{ targetId, grantedBy, ts }, ...]
-    async function readAllLabels() {
-        try {
-            const res = await fetch(KV_URL + encodeURIComponent('labels:all'), { headers: KV_AUTH });
-            if (!res.ok) return [];
-            const data = await res.json();
-            return Array.isArray(data) ? data : [];
-        } catch (e) {
-            return [];
-        }
-    }
-
-    async function writeAllLabels(list) {
-        const res = await fetch(KV_URL + encodeURIComponent('labels:all'), {
-            method: 'PUT', headers: KV_HEADERS, body: JSON.stringify(list)
-        });
-        if (!res.ok) throw new Error('KV write failed: ' + res.status);
-    }
-
     try {
         // ================= GET =================
         if (request.method === 'GET') {
             const url = new URL(request.url, 'https://x.local');
-
-            // 模式零：站长查全局标记列表 ?all=1&token=<站长token>
-            const all = (url.searchParams.get('all') || '').toString().trim();
-            if (all === '1' || all.toLowerCase() === 'true') {
-                const token = (url.searchParams.get('token') || '').toString();
-                const session = await parseToken(token);
-                if (!session) {
-                    return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
-                }
-                if (ADMINS.indexOf(session.id) === -1) {
-                    return response.status(403).json({ ok: false, message: '没有权限' });
-                }
-                const labels = await readAllLabels();
-                return response.status(200).json({ ok: true, labels: labels });
-            }
 
             // 模式一：企业查自己授予过的列表 ?by=<企业ID>&token=<token>
             const by = (url.searchParams.get('by') || '').toString().trim().replace(/^@/, '');
@@ -179,8 +141,8 @@ export default async function handler(request, response) {
                 if (!session) {
                     return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
                 }
-                // 只有该企业自己或站长能查
-                if (session.id !== by && ADMINS.indexOf(session.id) === -1) {
+                // 只有该企业本人能查自己的授予列表
+                if (session.id !== by) {
                     return response.status(403).json({ ok: false, message: '没有权限' });
                 }
                 // 校验 by 确实是企业认证（防止伪造 ID 浪费查询）
@@ -245,16 +207,13 @@ export default async function handler(request, response) {
         }
 
         const action = (body && body.action || '').toString().trim().toLowerCase();
-        const isAdmin = ADMINS.indexOf(session.id) !== -1;
 
         // ---- 授予标记 ----
         if (action === 'grant') {
-            // 校验授予方是企业认证（站长豁免）
-            if (!isAdmin) {
-                const vRec = await readVerified(session.id);
-                if (!vRec || vRec.type !== 'business') {
-                    return response.status(403).json({ ok: false, message: '只有企业认证账号可以授予标记' });
-                }
+            // 校验授予方是企业认证（无豁免，创始人亦不例外）
+            const vRec = await readVerified(session.id);
+            if (!vRec || vRec.type !== 'business') {
+                return response.status(403).json({ ok: false, message: '只有企业认证账号可以授予标记' });
             }
             // 目标账号必须真实存在
             if (!(await findUserHash(targetId))) {
@@ -289,13 +248,6 @@ export default async function handler(request, response) {
                 await writeGrantedList(session.id, list);
             }
 
-            // 追加全局索引 labels:all
-            const all = await readAllLabels();
-            if (!all.some(x => x && x.targetId === targetId)) {
-                all.push({ targetId: targetId, grantedBy: session.id, ts: now });
-                await writeAllLabels(all);
-            }
-
             return response.status(200).json({ ok: true, targetId: targetId, action: 'grant', grantedBy: session.id });
         }
 
@@ -305,8 +257,8 @@ export default async function handler(request, response) {
             if (!existing) {
                 return response.status(404).json({ ok: false, message: '该账号没有标记' });
             }
-            // 企业只能撤销自己授予的；站长可强制撤销任何
-            if (!isAdmin && existing.grantedBy !== session.id) {
+            // 只能由授予方本人撤销
+            if (existing.grantedBy !== session.id) {
                 return response.status(403).json({ ok: false, message: '只能撤销自己授予的标记' });
             }
 
@@ -320,13 +272,6 @@ export default async function handler(request, response) {
             if (idx !== -1) {
                 granterList.splice(idx, 1);
                 await writeGrantedList(existing.grantedBy, granterList);
-            }
-
-            // 从全局索引移除
-            const all = await readAllLabels();
-            const filtered = all.filter(x => !(x && x.targetId === targetId));
-            if (filtered.length !== all.length) {
-                await writeAllLabels(filtered);
             }
 
             return response.status(200).json({ ok: true, targetId: targetId, action: 'revoke' });

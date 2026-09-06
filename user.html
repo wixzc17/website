@@ -369,14 +369,11 @@
             // ---------- ID 提示 ----------
             idEl.addEventListener('click', function() { openModal(idModal); });
 
-            // ---------- 标记管理（企业认证本人 / 站长） ----------
-            var LABEL_ADMINS = ['wixzc17', 'lixs17'];
+            // ---------- 标记管理（仅企业认证本人） ----------
             var labelManage = document.getElementById('label-manage');
             var labelGrantCta = document.getElementById('label-grant-cta');
             var labelGrantedSection = document.getElementById('label-granted-section');
             var labelGrantedList = document.getElementById('label-granted-list');
-            var labelAdminSection = document.getElementById('label-admin-section');
-            var labelAdminList = document.getElementById('label-admin-list');
             var labelGrantModal = document.getElementById('modal-label-grant');
             var labelTargetInput = document.getElementById('label-target-input');
             var labelGrantError = document.getElementById('label-grant-error');
@@ -423,30 +420,16 @@
                 } catch (e) {}
             }
 
-            async function loadAdminList() {
-                try {
-                    var res = await fetch('/api/labels?all=1&token=' + encodeURIComponent(myToken));
-                    var data = await res.json();
-                    if (!data.ok) return;
-                    renderLabelList(labelAdminList, data.labels || [], '全站暂无标记');
-                    labelAdminSection.hidden = false;
-                } catch (e) {}
-            }
-
             async function initLabelManage() {
-                var isAdmin = LABEL_ADMINS.indexOf(myId) !== -1;
                 var isBusiness = false;
                 try {
                     var v = await fetch('/api/verified?id=' + encodeURIComponent(myId)).then(function (r) { return r.json(); });
                     isBusiness = !!(v.ok && v.verified && v.type === 'business');
                 } catch (e) {}
-                if (!isBusiness && !isAdmin) return;
+                if (!isBusiness) return;
                 labelManage.hidden = false;
-                if (isBusiness) {
-                    labelGrantCta.hidden = false;
-                    loadGrantedList();
-                }
-                if (isAdmin) loadAdminList();
+                labelGrantCta.hidden = false;
+                loadGrantedList();
             }
 
             labelGrantCta.addEventListener('click', function () {
@@ -482,7 +465,7 @@
                 btn.disabled = false;
             });
 
-            // 撤销（事件委托：已授予列表 + 站长全局列表共用）
+            // 撤销（事件委托：已授予列表）
             document.addEventListener('click', async function (e) {
                 var btn = e.target.closest ? e.target.closest('[data-revoke]') : null;
                 if (!btn) return;
@@ -496,7 +479,6 @@
                     var data = await res.json();
                     if (data.ok) {
                         if (!labelGrantedSection.hidden) loadGrantedList();
-                        if (!labelAdminSection.hidden) loadAdminList();
                     } else {
                         alert(data.message || '撤销失败');
                     }
@@ -1036,16 +1018,12 @@
             <span class="user-label-text" id="user-label-text"></span>
         </div>
 
-        <!-- 标记管理（仅企业认证本人 / 站长可见，JS 控制显示） -->
+        <!-- 标记管理（仅企业认证本人可见，JS 控制显示） -->
         <div class="label-manage" id="label-manage" hidden>
             <button class="label-grant-btn" id="label-grant-cta" type="button" hidden>授予标记</button>
             <div class="label-section" id="label-granted-section" hidden>
                 <div class="label-section-title">我已授予的标记</div>
                 <div class="label-list" id="label-granted-list"></div>
-            </div>
-            <div class="label-section" id="label-admin-section" hidden>
-                <div class="label-section-title">全部标记（站长管理）</div>
-                <div class="label-list" id="label-admin-list"></div>
             </div>
         </div>
     </div>

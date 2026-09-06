@@ -93,7 +93,7 @@
                         meAvatar.classList.add('has-img');
                     }
                 }
-                VerifiedBadge.attach(document.getElementById('me-name'), myId).then(function () { LabelBadge.attach(document.getElementById('me-name'), myId); });
+                LabelBadge.attach(document.getElementById('me-name'), myId).then(function () { VerifiedBadge.attach(document.getElementById('me-name'), myId); });
             });
 
             // 未读请求角标：白色圆圈数字，仅统计「看过之后」新来的未处理请求
@@ -185,7 +185,7 @@
                         }
                     }
                     // 认证标记（在名字定稿之后插入，避免被 textContent 覆盖清掉）
-                    VerifiedBadge.attach(nameEl, id).then(function () { LabelBadge.attach(nameEl, id); });
+                    LabelBadge.attach(nameEl, id).then(function () { VerifiedBadge.attach(nameEl, id); });
                 });
             });
 
@@ -504,7 +504,7 @@
                     addIncoming.appendChild(row);
                     loadUserProfile(from).then(p => {
                         if (p) fillUserRow(row, p.name, p.avatar);
-                        VerifiedBadge.attach(row.querySelector('.add-user-name'), from).then(function () { LabelBadge.attach(row.querySelector('.add-user-name'), from); });
+                        LabelBadge.attach(row.querySelector('.add-user-name'), from).then(function () { VerifiedBadge.attach(row.querySelector('.add-user-name'), from); });
                     });
                 });
             }
@@ -567,7 +567,7 @@
                     addSearchResults.appendChild(row);
                     loadUserProfile(u.id).then(p => {
                         if (p) fillUserRow(row, p.name, p.avatar);
-                        VerifiedBadge.attach(row.querySelector('.add-user-name'), u.id).then(function () { LabelBadge.attach(row.querySelector('.add-user-name'), u.id); });
+                        LabelBadge.attach(row.querySelector('.add-user-name'), u.id).then(function () { VerifiedBadge.attach(row.querySelector('.add-user-name'), u.id); });
                     });
                 });
                 } catch (e) {

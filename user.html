@@ -92,14 +92,14 @@
             VerifiedBadge.check(id).then(function (set) {
                 // 创始人：硬编码优先，文案特殊处理
                 if (FOUNDER_VERIFIED[id]) {
-                    VerifiedBadge.attach(nameEl, id).then(function () { LabelBadge.attach(nameEl, id); });
+                    LabelBadge.attach(nameEl, id).then(function () { VerifiedBadge.attach(nameEl, id); });
                     verifiedText.textContent = '此账号似乎在很久很久以前......获得了无限期的个人认证(这很可能是程序漏洞，我们会尽快修复！）';
                     verifiedEl.hidden = false;
                     return;
                 }
                 // 普通已认证用户：从 KV 读授予时间戳和类型
                 if (set.has(id)) {
-                    VerifiedBadge.attach(nameEl, id).then(function () { LabelBadge.attach(nameEl, id); });
+                    LabelBadge.attach(nameEl, id).then(function () { VerifiedBadge.attach(nameEl, id); });
                     fetch('/api/verified?id=' + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (d) {
                         if (d.ok && d.verified && d.ts) {
                             var date = new Date(d.ts);

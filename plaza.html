@@ -54,7 +54,7 @@
                         meAvatar.classList.add('has-img');
                     }
                 }
-                VerifiedBadge.attach(document.getElementById('me-name'), myId).then(function () { LabelBadge.attach(document.getElementById('me-name'), myId); });
+                LabelBadge.attach(document.getElementById('me-name'), myId).then(function () { VerifiedBadge.attach(document.getElementById('me-name'), myId); });
             });
 
             document.getElementById('logout-sidebar-btn').addEventListener('click', function() {
@@ -138,7 +138,7 @@
                 head.appendChild(meta);
 
                 // 认证标记（服务端没带 verified，这里用共享助手查）
-                VerifiedBadge.attach(nameEl, p.author).then(function () { LabelBadge.attach(nameEl, p.author); });
+                LabelBadge.attach(nameEl, p.author).then(function () { VerifiedBadge.attach(nameEl, p.author); });
 
                 // 自己的推文 → 删除按钮
                 if (p.author === myId) {

@@ -140,7 +140,7 @@
                 }
             }
             // 认证标记（在名字定稿之后插入，避免被 textContent 覆盖清掉）
-            VerifiedBadge.attach(document.getElementById('peer-name'), peerId).then(function () { LabelBadge.attach(document.getElementById('peer-name'), peerId); });
+            LabelBadge.attach(document.getElementById('peer-name'), peerId).then(function () { VerifiedBadge.attach(document.getElementById('peer-name'), peerId); });
 
             // 消息密钥：优先 v2 会话密钥（与密码无关）；任一方没有身份密钥时回退旧算法
             const legacyKey = await legacyKeyOf(myId, peerId, myHash);

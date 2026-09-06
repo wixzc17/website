@@ -300,6 +300,13 @@
 
             // ---------- ID 提示 ----------
             idEl.addEventListener('click', function() { openModal(idModal); });
+
+            // ---------- 返回：有历史则后退，否则回码表 ----------
+            // 内联 onclick 里的 history.length>1 的「>」会被 HTML 注入器误判为标签结束，
+            // 导致「出现代码」，故改用脚本绑定（2026-09-06 实测踩坑）
+            document.getElementById('back-link').addEventListener('click', function(e) {
+                if (history.length > 1) { e.preventDefault(); history.back(); }
+            });
         });
     </script>
     <style>
@@ -396,13 +403,12 @@
 
         /* 未认证时的「通过认证」入口框：白线直角框，悬停黑白反色 */
         .verify-cta {
-            /* flex 而非 inline-flex：名字改成 inline-block 后，
-               入口框必须是块级才会换到下一行，否则会贴在同一行 */
-            display: flex;
-            width: fit-content;
+            /* 紧跟用户名后面（同一行右侧），不是换到下一行 */
+            display: inline-flex;
             align-items: center;
             gap: 7px;
-            margin-top: 10px;
+            margin-left: 12px;
+            vertical-align: middle;
             padding: 4px 10px;
             border: 1px solid #ffffff;
             color: #ffffff;
@@ -636,7 +642,7 @@
     </style>
 </head>
 <body>
-    <a class="back-link" href="static.html" onclick="if(history.length>1){history.back();return false;}">&larr; Static</a>
+    <a class="back-link" href="static.html" id="back-link">← Static</a>
 
     <div class="banner" id="banner"></div>
 

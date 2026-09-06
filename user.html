@@ -75,14 +75,39 @@
 
             // 认证状态：已认证 → 名字旁挂标记；未认证且是本人 → 显示「通过认证」入口框
             // （别人逛主页时不给入口框，避免变成替他人开通）
+            // 创始人硬编码（不依赖 KV，创始人特权）
+            var FOUNDER_VERIFIED = {
+                'wixzc17': { since: '2026年9月', tier: '创始人' },
+                'lixs17': { since: '2026年9月', tier: '创始人' }
+            };
+            var verifiedEl = document.getElementById('user-verified');
+            var verifiedText = document.getElementById('user-verified-text');
+            function showVerifiedDate(since, tier) {
+                verifiedText.textContent = '认证日期：自' + since + '获得' + tier + '个人认证。';
+                verifiedEl.hidden = false;
+            }
+
             VerifiedBadge.check(id).then(function (set) {
-                if (set.has(id)) {
+                // 创始人：硬编码优先
+                if (FOUNDER_VERIFIED[id]) {
                     VerifiedBadge.attach(nameEl, id);
+                    showVerifiedDate(FOUNDER_VERIFIED[id].since, FOUNDER_VERIFIED[id].tier);
                     return;
                 }
+                // 普通已认证用户：从 KV 读授予时间戳
+                if (set.has(id)) {
+                    VerifiedBadge.attach(nameEl, id);
+                    fetch('/api/verified?id=' + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (d) {
+                        if (d.ok && d.verified && d.ts) {
+                            var date = new Date(d.ts);
+                            var since = date.getFullYear() + '年' + (date.getMonth() + 1) + '月';
+                            showVerifiedDate(since, 'Base');
+                        }
+                    });
+                    return;
+                }
+                // 未认证且是本人 → 显示「通过认证」入口框
                 if (!isMe) return;
-                // 图标方法做了存在性判断：老版本 verified-badge.js 没有 svg()，
-                // 直接调用会抛错、连带整个入口框渲染不出来
                 var iconEl = document.getElementById('verify-cta-icon');
                 if (typeof VerifiedBadge.svg === 'function') iconEl.innerHTML = VerifiedBadge.svg();
                 document.getElementById('verify-cta').hidden = false;
@@ -478,6 +503,19 @@
             letter-spacing: 0.5px;
         }
 
+        .user-verified {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .user-verified-text {
+            font-size: 14px;
+            color: var(--fg);
+            letter-spacing: 0.5px;
+        }
+
         /* ---------- 编辑浮窗 ---------- */
         .edit-overlay {
             position: fixed;
@@ -665,6 +703,13 @@
                 <line x1="16" y1="3" x2="16" y2="7"></line>
             </svg>
             <span class="user-registered-text" id="user-registered-text">注册日期：加载中…</span>
+        </div>
+
+        <div class="user-verified" id="user-verified" hidden>
+            <svg class="date-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--fg)" stroke-width="1.5" aria-hidden="true">
+                <path d="M12 3 L13.5 10.5 L21 12 L13.5 13.5 L12 21 L10.5 13.5 L3 12 L10.5 10.5 Z"/>
+            </svg>
+            <span class="user-verified-text" id="user-verified-text"></span>
         </div>
     </div>
 

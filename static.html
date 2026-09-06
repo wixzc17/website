@@ -90,6 +90,30 @@
                 }
             });
 
+            // 未读请求角标：白色圆圈数字，仅统计「看过之后」新来的未处理请求
+            const SEEN_KEY = 'static_seen_incoming_' + myId;
+            function getSeenTs() {
+                try {
+                    const v = parseInt(localStorage.getItem(SEEN_KEY), 10);
+                    return isNaN(v) ? 0 : v;
+                } catch (e) { return 0; }
+            }
+            function markSeen() {
+                try { localStorage.setItem(SEEN_KEY, String(Date.now())); } catch (e) {}
+            }
+            function updateBadge(incoming) {
+                const badge = document.getElementById('add-badge');
+                if (!badge) return;
+                const seen = getSeenTs();
+                const unread = (incoming || []).filter(r => r && r.ts && r.ts > seen).length;
+                if (unread > 0) {
+                    badge.textContent = unread > 99 ? '99+' : String(unread);
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
             // 码表：我的好友列表（来自 /api/contacts，先「添加好友」才会出现）
             const listEl = document.getElementById('contact-list');
 
@@ -99,7 +123,10 @@
             try {
                 const res = await fetch('/api/contacts?token=' + encodeURIComponent(myToken));
                 const data = await res.json();
-                if (data.ok && Array.isArray(data.contacts)) allIds = data.contacts;
+                if (data.ok) {
+                    if (Array.isArray(data.contacts)) allIds = data.contacts;
+                    updateBadge(data.incoming);
+                }
             } catch (e) {}
 
             // 空状态：还没有好友时给出提示
@@ -371,6 +398,8 @@
                 addOverlay.classList.add('show');
                 addSearchInput.value = '';
                 addSearchResults.innerHTML = '';
+                markSeen();
+                updateBadge([]);
                 loadAddState();
             }
             function closeAdd() {
@@ -1223,6 +1252,25 @@
             opacity: 0.7;
         }
 
+        .add-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #000000;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
         .add-overlay {
             position: fixed;
             inset: 0;
@@ -1537,6 +1585,7 @@
                 <path d="M800 230 H984"/>
             </g>
         </svg>
+        <span class="add-badge" id="add-badge"></span>
     </div>
 
     <!-- 右上角 prism 入口 -->

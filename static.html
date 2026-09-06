@@ -48,6 +48,7 @@
 
             // 左上角显示自己的身份（头像先用名字首字符占位）
             document.getElementById('me-name').textContent = myName;
+            document.getElementById('profile-link').href = 'user.html?id=' + encodeURIComponent(myId);
             document.getElementById('me-id').textContent = '@' + myId;
             const meAvatar = document.getElementById('me-avatar');
             meAvatar.textContent = (myName || '@').charAt(0).toUpperCase();
@@ -1706,7 +1707,7 @@
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <div class="sidebar" id="sidebar">
         <button class="sidebar-close" id="sidebar-close" type="button">&times;</button>
-        <a class="sidebar-item" href="profile.html">个人资料</a>
+        <a class="sidebar-item" id="profile-link" href="#">个人资料</a>
         <button class="sidebar-item sidebar-logout" id="logout-sidebar-btn" type="button">退出登录</button>
     </div>
 

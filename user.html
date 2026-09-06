@@ -15,10 +15,15 @@
                 return;
             }
 
+            const myId = sessionStorage.getItem('static_id');
+            const myToken = sessionStorage.getItem('static_token');
+            const isMe = !!(myId && myId === id && myToken);
+
             const avatarEl = document.getElementById('user-avatar');
             const nameEl = document.getElementById('user-name');
             const idEl = document.getElementById('user-id');
             const regText = document.getElementById('user-registered-text');
+            const bannerEl = document.getElementById('banner');
 
             idEl.textContent = '@' + id;
 
@@ -29,28 +34,256 @@
                 return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
             }
 
-            try {
-                const res = await fetch('/api/profile?id=' + encodeURIComponent(id));
-                const data = await res.json();
-                if (!data.ok) {
-                    nameEl.textContent = '用户不存在';
+            let profileData = null;
+
+            async function loadAndRender() {
+                try {
+                    const res = await fetch('/api/profile?id=' + encodeURIComponent(id));
+                    const data = await res.json();
+                    if (!data.ok) {
+                        nameEl.textContent = '用户不存在';
+                        regText.textContent = '注册日期：未知';
+                        return;
+                    }
+                    profileData = data;
+                    const name = data.name || ('@' + id);
+                    nameEl.textContent = name;
+                    if (data.avatar) {
+                        avatarEl.textContent = '';
+                        avatarEl.style.backgroundImage = 'url(' + data.avatar + ')';
+                    } else {
+                        avatarEl.style.backgroundImage = '';
+                        avatarEl.textContent = name.charAt(0).toUpperCase();
+                    }
+                    if (data.banner) {
+                        bannerEl.style.backgroundImage = 'url(' + data.banner + ')';
+                    } else {
+                        bannerEl.style.backgroundImage = '';
+                    }
+                    const reg = formatRegisteredAt(data.registeredAt);
+                    regText.textContent = reg ? ('注册日期：' + reg) : '注册日期：未知';
+                } catch (e) {
+                    nameEl.textContent = '加载失败';
                     regText.textContent = '注册日期：未知';
-                    return;
                 }
-                const name = data.name || ('@' + id);
-                nameEl.textContent = name;
-                if (data.avatar) {
-                    avatarEl.textContent = '';
-                    avatarEl.style.backgroundImage = 'url(' + data.avatar + ')';
-                } else {
-                    avatarEl.textContent = name.charAt(0).toUpperCase();
-                }
-                const reg = formatRegisteredAt(data.registeredAt);
-                regText.textContent = reg ? ('注册日期：' + reg) : '注册日期：未知';
-            } catch (e) {
-                nameEl.textContent = '加载失败';
-                regText.textContent = '注册日期：未知';
             }
+
+            await loadAndRender();
+
+            if (!isMe) return;
+
+            // ---------- 自己的主页：元素可点击 ----------
+            bannerEl.classList.add('editable');
+            avatarEl.classList.add('editable');
+            nameEl.classList.add('editable');
+            idEl.classList.add('editable');
+
+            const overlay = document.getElementById('edit-overlay');
+            const cropModal = document.getElementById('modal-crop');
+            const nameModal = document.getElementById('modal-name');
+            const idModal = document.getElementById('modal-id');
+            const cropTitle = document.getElementById('crop-title');
+            const cropRatioHint = document.getElementById('crop-ratio-hint');
+
+            let openModalEl = null;
+            function openModal(el) {
+                overlay.classList.add('show');
+                el.classList.add('open');
+                openModalEl = el;
+            }
+            function closeModal() {
+                overlay.classList.remove('show');
+                if (openModalEl) openModalEl.classList.remove('open');
+                openModalEl = null;
+            }
+            overlay.addEventListener('click', closeModal);
+            document.querySelectorAll('.modal-close, [data-close]').forEach(b => b.addEventListener('click', closeModal));
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+
+            // ---------- 裁剪器 ----------
+            const cropBox = document.getElementById('cropper-box');
+            const cropImg = document.getElementById('cropper-img');
+            const cropHint = document.getElementById('crop-hint');
+            const cropConfirm = document.getElementById('crop-confirm');
+            const cropFileInput = document.getElementById('crop-file');
+
+            let cropMode = 'avatar';   // 'avatar' 1:1 / 'banner' 4:3
+            let cropRatio = 1;
+            let cropScale = 1, cropTx = 0, cropTy = 0;
+            let cropBoxW = 0, cropBoxH = 0;
+            let cropImgEl = null;
+
+            function resetCropper(mode) {
+                cropMode = mode;
+                cropRatio = mode === 'avatar' ? 1 : 4 / 3;
+                cropTitle.textContent = mode === 'avatar' ? '修改头像' : '修改背景图';
+                cropRatioHint.textContent = mode === 'avatar' ? '比例为 1:1' : '比例为 4:3';
+                cropImgEl = null;
+                cropImg.removeAttribute('src');
+                cropImg.style.display = 'none';
+                cropHint.style.display = 'flex';
+                cropBox.style.height = '0px';
+                cropConfirm.disabled = true;
+                cropFileInput.value = '';
+            }
+
+            function openCropper(mode) {
+                resetCropper(mode);
+                openModal(cropModal);
+            }
+
+            bannerEl.addEventListener('click', function() { openCropper('banner'); });
+            avatarEl.addEventListener('click', function() { openCropper('avatar'); });
+
+            document.getElementById('crop-file-btn').addEventListener('click', function() {
+                cropFileInput.click();
+            });
+
+            cropFileInput.addEventListener('change', function(e) {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const img = new Image();
+                    img.onload = function() {
+                        cropImgEl = img;
+                        cropImg.src = ev.target.result;
+                        cropImg.style.display = 'block';
+                        cropHint.style.display = 'none';
+                        initCropLayout();
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            function initCropLayout() {
+                cropBoxW = cropBox.clientWidth;
+                cropBoxH = cropBoxW / cropRatio;
+                cropBox.style.height = cropBoxH + 'px';
+                const iw = cropImgEl.naturalWidth, ih = cropImgEl.naturalHeight;
+                cropScale = Math.max(cropBoxW / iw, cropBoxH / ih);
+                cropTx = (cropBoxW - iw * cropScale) / 2;
+                cropTy = (cropBoxH - ih * cropScale) / 2;
+                cropImg.style.width = iw + 'px';
+                cropImg.style.height = ih + 'px';
+                renderCrop();
+                cropConfirm.disabled = false;
+            }
+
+            function renderCrop() {
+                cropImg.style.transform = 'translate(' + cropTx + 'px,' + cropTy + 'px) scale(' + cropScale + ')';
+            }
+
+            let dragging = false, dStartX = 0, dStartY = 0, dStartTx = 0, dStartTy = 0;
+
+            cropBox.addEventListener('mousedown', function(e) {
+                if (!cropImgEl) return;
+                dragging = true;
+                dStartX = e.clientX; dStartY = e.clientY;
+                dStartTx = cropTx; dStartTy = cropTy;
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', function(e) {
+                if (!dragging) return;
+                cropTx = dStartTx + (e.clientX - dStartX);
+                cropTy = dStartTy + (e.clientY - dStartY);
+                renderCrop();
+            });
+            window.addEventListener('mouseup', function() { dragging = false; });
+
+            cropBox.addEventListener('touchstart', function(e) {
+                if (!cropImgEl || !e.touches.length) return;
+                dragging = true;
+                dStartX = e.touches[0].clientX; dStartY = e.touches[0].clientY;
+                dStartTx = cropTx; dStartTy = cropTy;
+            }, { passive: true });
+            window.addEventListener('touchmove', function(e) {
+                if (!dragging || !e.touches.length) return;
+                cropTx = dStartTx + (e.touches[0].clientX - dStartX);
+                cropTy = dStartTy + (e.touches[0].clientY - dStartY);
+                renderCrop();
+            }, { passive: true });
+            window.addEventListener('touchend', function() { dragging = false; });
+
+            cropBox.addEventListener('wheel', function(e) {
+                if (!cropImgEl) return;
+                e.preventDefault();
+                const factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+                const cx = cropBoxW / 2, cy = cropBoxH / 2;
+                const px = (cx - cropTx) / cropScale;
+                const py = (cy - cropTy) / cropScale;
+                cropScale = Math.max(0.1, Math.min(10, cropScale * factor));
+                cropTx = cx - px * cropScale;
+                cropTy = cy - py * cropScale;
+                renderCrop();
+            }, { passive: false });
+
+            function exportCrop(outW, outH) {
+                const srcX = -cropTx / cropScale;
+                const srcY = -cropTy / cropScale;
+                const srcW = cropBoxW / cropScale;
+                const srcH = cropBoxH / cropScale;
+                const canvas = document.createElement('canvas');
+                canvas.width = outW;
+                canvas.height = outH;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(cropImgEl, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+                return canvas.toDataURL('image/jpeg', 0.85);
+            }
+
+            cropConfirm.addEventListener('click', async function() {
+                if (!cropImgEl) return;
+                let field, dataUri;
+                if (cropMode === 'avatar') {
+                    field = 'avatar';
+                    dataUri = exportCrop(256, 256);
+                } else {
+                    field = 'banner';
+                    dataUri = exportCrop(1200, 900);
+                }
+                try {
+                    const body = { token: myToken, name: profileData.name || ('@' + id) };
+                    body[field] = dataUri;
+                    const res = await fetch('/api/profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        closeModal();
+                        await loadAndRender();
+                    }
+                } catch (e) {}
+            });
+
+            // ---------- 用户名 ----------
+            nameEl.addEventListener('click', function() {
+                document.getElementById('name-edit-input').value = profileData.name || '';
+                openModal(nameModal);
+            });
+
+            document.getElementById('name-save').addEventListener('click', async function() {
+                const name = document.getElementById('name-edit-input').value.trim();
+                if (!name || name.length > 16) return;
+                try {
+                    const res = await fetch('/api/profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, name: name })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        closeModal();
+                        await loadAndRender();
+                    }
+                } catch (e) {}
+            });
+
+            // ---------- ID 提示 ----------
+            idEl.addEventListener('click', function() { openModal(idModal); });
         });
     </script>
     <style>
@@ -89,6 +322,13 @@
             border-bottom: 1px solid #262626;
             max-width: 50%;
             margin: 0 auto;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .banner.editable {
+            cursor: pointer;
         }
 
         .profile-card {
@@ -115,16 +355,28 @@
             background-position: center;
         }
 
+        .user-avatar.editable {
+            cursor: pointer;
+        }
+
         .user-name {
             font-size: 22px;
             font-weight: 700;
             margin-top: 16px;
         }
 
+        .user-name.editable {
+            cursor: pointer;
+        }
+
         .user-id {
             font-size: 13px;
             color: #666666;
             margin-top: 4px;
+        }
+
+        .user-id.editable {
+            cursor: pointer;
         }
 
         .user-registered {
@@ -146,6 +398,154 @@
             letter-spacing: 0.5px;
         }
 
+        /* ---------- 编辑浮窗 ---------- */
+        .edit-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 3000;
+        }
+
+        .edit-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -46%);
+            width: min(420px, calc(100vw - 32px));
+            background: #000000;
+            border: 1px solid #404040;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 3001;
+            display: none;
+        }
+
+        .modal.open {
+            display: block;
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%);
+        }
+
+        .modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid #262626;
+        }
+
+        .modal-title {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888888;
+            font-size: 20px;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            cursor: pointer;
+            padding: 2px 8px;
+        }
+
+        .modal-close:hover {
+            color: #ffffff;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            border: 1px solid #ffffff;
+            background: #000000;
+            color: #ffffff;
+            font-size: 13px;
+            padding: 8px 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn:hover:not(:disabled) {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .modal-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .name-edit-input {
+            width: 100%;
+            border: none;
+            border-bottom: 1px solid #ffffff;
+            background: transparent;
+            color: #ffffff;
+            font-size: 15px;
+            padding: 10px 2px;
+            outline: none;
+        }
+
+        .id-tip {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #dddddd;
+        }
+
+        .crop-ratio-hint {
+            font-size: 13px;
+            color: #666666;
+            margin-bottom: 12px;
+        }
+
+        .cropper-box {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            background: #000000;
+            touch-action: none;
+            cursor: move;
+        }
+
+        .cropper-box img {
+            position: absolute;
+            left: 0;
+            top: 0;
+            transform-origin: 0 0;
+            user-select: none;
+            -webkit-user-drag: none;
+            max-width: none;
+        }
+
+        .crop-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666666;
+            font-size: 13px;
+        }
+
         @media (max-width: 768px) {
             .back-link {
                 top: 10px;
@@ -155,6 +555,7 @@
 
             .banner {
                 max-width: 100%;
+                height: 150px;
             }
 
             .profile-card {
@@ -166,7 +567,7 @@
 <body>
     <a class="back-link" href="static.html" onclick="if(history.length>1){history.back();return false;}">&larr; Static</a>
 
-    <div class="banner"></div>
+    <div class="banner" id="banner"></div>
 
     <div class="profile-card">
         <div class="user-avatar" id="user-avatar">@</div>
@@ -180,6 +581,56 @@
                 <line x1="16" y1="3" x2="16" y2="7"></line>
             </svg>
             <span class="user-registered-text" id="user-registered-text">注册日期：加载中…</span>
+        </div>
+    </div>
+
+    <div class="edit-overlay" id="edit-overlay"></div>
+
+    <!-- 共用裁剪浮窗（背景图 / 头像） -->
+    <div class="modal" id="modal-crop">
+        <div class="modal-head">
+            <div class="modal-title" id="crop-title">修改头像</div>
+            <button class="modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="crop-ratio-hint" id="crop-ratio-hint">比例为 1:1</div>
+            <div class="cropper-box" id="cropper-box">
+                <div class="crop-hint" id="crop-hint">请选择图片</div>
+                <img id="cropper-img" alt="">
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" type="button" id="crop-file-btn">选择图片</button>
+                <button class="modal-btn" type="button" id="crop-confirm" disabled>确认</button>
+            </div>
+            <input type="file" id="crop-file" accept="image/*" style="display: none">
+        </div>
+    </div>
+
+    <!-- 用户名浮窗 -->
+    <div class="modal" id="modal-name">
+        <div class="modal-head">
+            <div class="modal-title">修改用户名</div>
+            <button class="modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="text" class="name-edit-input" id="name-edit-input" maxlength="16" placeholder="输入新的用户名" autocomplete="off">
+            <div class="modal-actions">
+                <button class="modal-btn" type="button" id="name-save">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ID 提示浮窗 -->
+    <div class="modal" id="modal-id">
+        <div class="modal-head">
+            <div class="modal-title">账号 ID</div>
+            <button class="modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="id-tip">账号 ID 是唯一标识，注册后无法更改。</div>
+            <div class="modal-actions">
+                <button class="modal-btn" type="button" data-close>知道了</button>
+            </div>
         </div>
     </div>
 </body>

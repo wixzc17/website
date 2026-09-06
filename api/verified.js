@@ -60,13 +60,14 @@ export default async function handler(request, response) {
         return { id };
     }
 
-    // 读单条认证记录：已认证返回 ts（毫秒数），未认证/出错返回 null
+    // 读单条认证记录：返回 {ts, type} 或 null（type 缺省按 personal 兼容旧数据）
     async function readVerified(id) {
         try {
             const res = await fetch(KV_URL + encodeURIComponent('verified:' + id), { headers: KV_AUTH });
             if (!res.ok) return null;
             const data = await res.json();
-            return (data && typeof data.ts === 'number') ? data.ts : null;
+            if (!data || typeof data.ts !== 'number') return null;
+            return { ts: data.ts, type: data.type === 'business' ? 'business' : 'personal' };
         } catch (e) {
             return null;
         }
@@ -83,8 +84,8 @@ export default async function handler(request, response) {
                 if (!/^[a-zA-Z0-9]+$/.test(single)) {
                     return response.status(400).json({ ok: false, message: '参数不合法' });
                 }
-                const ts = await readVerified(single);
-                return response.status(200).json({ ok: true, id: single, verified: ts !== null, ts: ts });
+                const rec = await readVerified(single);
+                return response.status(200).json({ ok: true, id: single, verified: rec !== null, ts: rec ? rec.ts : null, type: rec ? rec.type : null });
             }
 
             // 批量模式：?ids=a,b,c（最多 50 个）
@@ -131,11 +132,12 @@ export default async function handler(request, response) {
             if (!(await findUserHash(targetId))) {
                 return response.status(404).json({ ok: false, message: '用户不存在' });
             }
+            const grantType = (body && body.type === 'business') ? 'business' : 'personal';
             const res = await fetch(KV_URL + encodeURIComponent('verified:' + targetId), {
-                method: 'PUT', headers: KV_HEADERS, body: JSON.stringify({ ts: Date.now() })
+                method: 'PUT', headers: KV_HEADERS, body: JSON.stringify({ ts: Date.now(), type: grantType })
             });
             if (!res.ok) throw new Error('KV write failed: ' + res.status);
-            return response.status(200).json({ ok: true, targetId: targetId, action: 'grant' });
+            return response.status(200).json({ ok: true, targetId: targetId, action: 'grant', type: grantType });
         }
 
         // ---- 撤销认证 ----

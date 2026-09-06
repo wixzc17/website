@@ -8,16 +8,18 @@
 // 接口：GET /api/verified?ids=a,b,c → { ok, verified: { a: ts, ... } }（公开，无需登录）
 // 同一页面多个 attach 会合并成一次请求（40ms 微批），同一 id 结果全页缓存
 (function () {
-    var cache = {};          // id -> true / false（false 也是缓存，避免重复请求）
+    var cache = {};          // id -> 'personal' | 'business' | false（false 也是缓存，避免重复请求）
     var batch = {};          // id -> [resolveFn...]，等待合并的请求
     var batchScheduled = false;
 
-    // 认证标记：渐变蓝四角星，渐变定义见 ensureStyle 注入的全局 <linearGradient id="vbadge-grad">
-    // （用全局唯一 id，避免每处内联 SVG 重复 id 互相覆盖）
-    var BADGE_SVG =
-        '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="已认证">' +
-        '<path d="M50 8 L58 42 L92 50 L58 58 L50 92 L42 58 L8 50 L42 42 Z" fill="url(#vbadge-grad)"/>' +
-        '</svg>';
+    // 认证标记：四角星。个人=渐变蓝，企业=渐变金
+    function badgeSvg(type) {
+        var grad = type === 'business' ? 'vbadge-grad-gold' : 'vbadge-grad';
+        return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="' +
+            (type === 'business' ? '企业认证' : '已认证') + '">' +
+            '<path d="M50 8 L58 42 L92 50 L58 58 L50 92 L42 58 L8 50 L42 42 Z" fill="url(#' + grad + ')"/>' +
+            '</svg>';
+    }
 
     // 样式与渐变定义各只注入一次
     function ensureStyle() {
@@ -40,6 +42,9 @@
                 '<svg xmlns="http://www.w3.org/2000/svg"><defs>' +
                 '<linearGradient id="vbadge-grad" x1="0" y1="0" x2="1" y2="1">' +
                 '<stop offset="0" stop-color="#4DA3FF"/><stop offset="1" stop-color="#1D6BE0"/>' +
+                '</linearGradient>' +
+                '<linearGradient id="vbadge-grad-gold" x1="0" y1="0" x2="1" y2="1">' +
+                '<stop offset="0" stop-color="#FFE55C"/><stop offset="1" stop-color="#FFB300"/>' +
                 '</linearGradient></defs></svg>';
             document.body.appendChild(defs);
         }
@@ -56,7 +61,9 @@
                 var map = (data && data.ok && data.verified) ? data.verified : {};
                 ids.forEach(function (id) {
                     var has = Object.prototype.hasOwnProperty.call(map, id);
-                    cache[id] = has;
+                    var rec = has ? map[id] : null;
+                    var type = (rec && rec.type === 'business') ? 'business' : 'personal';
+                    cache[id] = has ? type : false;
                     (current[id] || []).forEach(function (fn) { fn(has); });
                 });
             })
@@ -81,7 +88,7 @@
     }
 
     window.VerifiedBadge = {
-        svg: function () { ensureStyle(); return BADGE_SVG; },   // 页面里单独放图标时用（如「通过认证」入口框）
+        svg: function () { ensureStyle(); return badgeSvg('personal'); },   // 页面里单独放图标时用（如「通过认证」入口框，默认蓝色个人认证）
 
         check: function (ids) {
             var self = this;
@@ -103,10 +110,11 @@
                 if (!set.has(id) || !nameEl || !nameEl.parentNode) return false;
                 // 防重复插入（比如资料回填后再次调用）
                 if (nameEl.querySelector('.verified-badge')) return true;
+                var type = cache[id] === 'business' ? 'business' : 'personal';
                 var span = document.createElement('span');
                 span.className = 'verified-badge';
-                span.title = '已认证账号';
-                span.innerHTML = BADGE_SVG;
+                span.title = type === 'business' ? '企业认证账号' : '已认证账号';
+                span.innerHTML = badgeSvg(type);
                 nameEl.appendChild(span);
                 return true;
             }).catch(function () { return false; });

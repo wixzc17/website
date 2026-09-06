@@ -83,7 +83,8 @@
             var verifiedEl = document.getElementById('user-verified');
             var verifiedText = document.getElementById('user-verified-text');
             function showVerifiedDate(since, tier) {
-                verifiedText.textContent = '认证日期：自' + since + '获得' + tier + '个人认证。';
+                var suffix = tier === '企业' ? '认证' : '个人认证';
+                verifiedText.textContent = '认证日期：自' + since + '获得' + tier + suffix + '。';
                 verifiedEl.hidden = false;
             }
 
@@ -94,14 +95,15 @@
                     showVerifiedDate(FOUNDER_VERIFIED[id].since, FOUNDER_VERIFIED[id].tier);
                     return;
                 }
-                // 普通已认证用户：从 KV 读授予时间戳
+                // 普通已认证用户：从 KV 读授予时间戳和类型
                 if (set.has(id)) {
                     VerifiedBadge.attach(nameEl, id);
                     fetch('/api/verified?id=' + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (d) {
                         if (d.ok && d.verified && d.ts) {
                             var date = new Date(d.ts);
                             var since = date.getFullYear() + '年' + (date.getMonth() + 1) + '月';
-                            showVerifiedDate(since, 'Base');
+                            var tier = d.type === 'business' ? '企业' : 'Base';
+                            showVerifiedDate(since, tier);
                         }
                     });
                     return;

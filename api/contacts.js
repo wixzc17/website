@@ -61,6 +61,18 @@ export default async function handler(request, response) {
         return { id };
     }
 
+    // 查认证状态：verified:<id> 存在即已认证（当前无过期机制，存在=有效）
+    async function isVerified(id) {
+        try {
+            const res = await fetch(KV_URL + encodeURIComponent('verified:' + id), { headers: KV_AUTH });
+            if (!res.ok) return false;
+            const data = await res.json();
+            return !!(data && typeof data.ts === 'number');
+        } catch (e) {
+            return false;
+        }
+    }
+
     // 读 KV 里的列表；key 不存在返回 []，存储故障抛错（由上层 500 兜底）
     async function readList(key) {
         const res = await fetch(KV_URL + encodeURIComponent(key), { headers: KV_AUTH });
@@ -157,6 +169,18 @@ export default async function handler(request, response) {
                     readList('contacts:' + session.id),
                     readList('contacts:' + targetId)
                 ]);
+                // 无认证账号好友上限 5 个（双方都查，任一超限都拒绝）
+                const FREE_LIMIT = 5;
+                const [myVerified, targetVerified] = await Promise.all([
+                    isVerified(session.id),
+                    isVerified(targetId)
+                ]);
+                if (!myVerified && mine.length >= FREE_LIMIT) {
+                    return response.status(403).json({ ok: false, message: '无认证账号好友上限 ' + FREE_LIMIT + ' 个' });
+                }
+                if (!targetVerified && theirs.length >= FREE_LIMIT) {
+                    return response.status(403).json({ ok: false, message: '对方好友位已满（无认证账号上限 ' + FREE_LIMIT + ' 个）' });
+                }
                 if (!mine.includes(targetId)) mine.push(targetId);
                 if (!theirs.includes(session.id)) theirs.push(session.id);
                 await Promise.all([
@@ -190,6 +214,18 @@ export default async function handler(request, response) {
                 readList('contacts:' + targetId),
                 readList('outgoing:' + targetId)
             ]);
+            // 无认证账号好友上限 5 个（双方都查）
+            const FREE_LIMIT = 5;
+            const [myVerified, targetVerified] = await Promise.all([
+                isVerified(session.id),
+                isVerified(targetId)
+            ]);
+            if (!myVerified && mine.length >= FREE_LIMIT) {
+                return response.status(403).json({ ok: false, message: '无认证账号好友上限 ' + FREE_LIMIT + ' 个' });
+            }
+            if (!targetVerified && theirContacts.length >= FREE_LIMIT) {
+                return response.status(403).json({ ok: false, message: '对方好友位已满（无认证账号上限 ' + FREE_LIMIT + ' 个）' });
+            }
             if (!theirContacts.includes(session.id)) theirContacts.push(session.id);
             const myNew = mine.concat([targetId]);
             // 消费掉对方发来的那条请求 + 清理对方 outgoing 里对我的记录

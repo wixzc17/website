@@ -65,6 +65,18 @@ export default async function handler(request, response) {
         return { id };
     }
 
+    // 查认证状态：verified:<id> 存在即已认证（当前无过期机制，存在=有效）
+    async function isVerified(id) {
+        try {
+            const res = await fetch(KV_URL + encodeURIComponent('verified:' + id), { headers: KV_AUTH });
+            if (!res.ok) return false;
+            const data = await res.json();
+            return !!(data && typeof data.ts === 'number');
+        } catch (e) {
+            return false;
+        }
+    }
+
     async function readJSON(key, fallback) {
         const res = await fetch(KV_URL + encodeURIComponent(key), { headers: KV_AUTH });
         if (res.status === 404) return fallback;
@@ -214,6 +226,13 @@ export default async function handler(request, response) {
             const session = await parseToken(body && body.token);
             if (!session) {
                 return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
+            }
+
+            // 未认证账号不可发推 / 评论 / 点赞（GET 看广场、DELETE 自己的推文不受限）
+            if (!(await isVerified(session.id))) {
+                const act = (body && body.action) || 'post';
+                const actName = act === 'like' ? '点赞' : act === 'comment' ? '评论' : '发推';
+                return response.status(403).json({ ok: false, message: '未认证账号不可' + actName + '，认证后解锁' });
             }
 
             // ---- 点赞 / 取消点赞 ----

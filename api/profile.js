@@ -4,7 +4,7 @@
 // GET  /api/profile?id=xxx          读取某用户的资料（码表/聊天页展示用）
 // POST /api/profile { token, name, avatar }   修改自己的资料（需登录）
 //
-// KV 结构：key = profile:用户ID，value = { "name": "...", "avatar": "data:image/..." }
+// KV 结构：key = profile:用户ID，value = { "name": "...", "avatar": "data:image/...", "banner": "data:image/..." }
 
 import crypto from 'crypto';
 
@@ -99,9 +99,10 @@ export default async function handler(request, response) {
             // KV 没有则回退到环境变量里的初始名字
             const name = (profile && profile.name) || account.name || ('@' + id);
             const avatar = (profile && profile.avatar) || null;
+            const banner = (profile && profile.banner) || null;
             // 注册日期：注册时写入 user:<id> 的 ts 时间戳（老硬编码账号无此字段）
             const registeredAt = (typeof account.ts === 'number' && account.ts > 0) ? account.ts : null;
-            return response.status(200).json({ ok: true, name: name, avatar: avatar, registeredAt: registeredAt });
+            return response.status(200).json({ ok: true, name: name, avatar: avatar, registeredAt: registeredAt, banner: banner });
         }
 
         if (request.method === 'POST') {
@@ -125,6 +126,14 @@ export default async function handler(request, response) {
                 }
             }
 
+            // 校验背景图：null（清除）或 data:image/ 开头且不超过约 300KB
+            const banner = body ? body.banner : undefined;
+            if (banner !== null && banner !== undefined) {
+                if (typeof banner !== 'string' || !banner.startsWith('data:image/') || banner.length > 300000) {
+                    return response.status(400).json({ ok: false, message: '背景图格式不正确或过大' });
+                }
+            }
+
             // 读取现有资料（保留未修改的字段）
             const existing = await readProfile(session.id);
             if (existing === undefined) {
@@ -134,9 +143,10 @@ export default async function handler(request, response) {
             const profile = existing || {};
             profile.name = name;
             if (avatar !== undefined) profile.avatar = avatar; // null = 清除头像，undefined = 不动
+            if (banner !== undefined) profile.banner = banner; // null = 清除背景图，undefined = 不动
 
             await writeProfile(session.id, profile);
-            return response.status(200).json({ ok: true, name: profile.name, avatar: profile.avatar || null });
+            return response.status(200).json({ ok: true, name: profile.name, avatar: profile.avatar || null, banner: profile.banner || null });
         }
 
         return response.status(405).json({ ok: false, message: '方法不允许' });

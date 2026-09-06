@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static · 广场</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script src="/verified-badge.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const myId = sessionStorage.getItem('static_id');
             const myName = sessionStorage.getItem('static_name') || myId;
             const myToken = sessionStorage.getItem('static_token');
 
-            // 未登录 → 回登录页
             if (!myId || !myToken) {
                 window.location.href = 'login.html';
                 return;
             }
 
-            // 左上角显示自己的身份（头像先用名字首字符占位）
+            // 左上角身份
             document.getElementById('me-name').textContent = myName;
             document.getElementById('me-id').textContent = '@' + myId;
             document.getElementById('profile-link').href = 'user.html?id=' + encodeURIComponent(myId);
@@ -27,20 +27,12 @@
             // ---------- 侧边栏 ----------
             const sidebar = document.getElementById('sidebar');
             const sidebarOverlay = document.getElementById('sidebar-overlay');
-
-            function openSidebar() {
-                sidebar.classList.add('open');
-                sidebarOverlay.classList.add('show');
-            }
-            function closeSidebar() {
-                sidebar.classList.remove('open');
-                sidebarOverlay.classList.remove('show');
-            }
+            function openSidebar() { sidebar.classList.add('open'); sidebarOverlay.classList.add('show'); }
+            function closeSidebar() { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('show'); }
             meAvatar.addEventListener('click', openSidebar);
             sidebarOverlay.addEventListener('click', closeSidebar);
             document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
 
-            // ---------- 拉取自己的最新资料（头像/名字） ----------
             async function fetchProfile(id) {
                 try {
                     const res = await fetch('/api/profile?id=' + encodeURIComponent(id));
@@ -61,37 +53,6 @@
                 }
             });
 
-            // ---------- 下拉阻尼回弹（列表不满屏时也有橡皮筋手感） ----------
-            const scroller = document.querySelector('.plaza-content');
-            const feedList = document.getElementById('plaza-feed');
-            let pullStartY = 0, pulling = false;
-
-            scroller.addEventListener('touchstart', function(e) {
-                pulling = true;
-                pullStartY = e.touches[0].clientY;
-                feedList.style.transition = 'none';
-            }, { passive: true });
-
-            scroller.addEventListener('touchmove', function(e) {
-                if (!pulling) return;
-                const dy = e.touches[0].clientY - pullStartY;
-                if (dy > 0 && scroller.scrollTop <= 0) {
-                    const offset = Math.pow(dy, 0.75);
-                    feedList.style.transform = 'translateY(' + offset + 'px)';
-                    e.preventDefault();
-                }
-            }, { passive: false });
-
-            function springBack() {
-                if (!pulling) return;
-                pulling = false;
-                feedList.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
-                feedList.style.transform = '';
-            }
-            scroller.addEventListener('touchend', springBack);
-            scroller.addEventListener('touchcancel', springBack);
-
-            // 退出登录（侧边栏里，同时清除本设备的自动登录记忆）
             document.getElementById('logout-sidebar-btn').addEventListener('click', function() {
                 closeSidebar();
                 sessionStorage.clear();
@@ -101,21 +62,318 @@
                 } catch (e) {}
                 window.location.href = 'index.html';
             });
+
+            // ---------- 推文广场 ----------
+            const feedEl = document.getElementById('plaza-feed');
+            const composerInput = document.getElementById('composer-input');
+            const composerCount = document.getElementById('composer-count');
+            const composerSend = document.getElementById('composer-send');
+            const MAX_TEXT = 500;
+
+            function timeAgo(ts) {
+                const s = Math.floor((Date.now() - ts) / 1000);
+                if (s < 60) return '刚刚';
+                if (s < 3600) return Math.floor(s / 60) + '分钟前';
+                if (s < 86400) return Math.floor(s / 3600) + '小时前';
+                const d = new Date(ts);
+                return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+            }
+
+            function esc(s) {
+                return String(s).replace(/[&<>"']/g, function(c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            }
+
+            const ICON_LIKE = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 20 C8 16 4 13 4 8.5 C4 6 6 4.5 8 4.5 C10 4.5 12 6 12 6 C12 6 14 4.5 16 4.5 C18 4.5 20 6 20 8.5 C20 13 16 16 12 20 Z"/></svg>';
+            const ICON_COMMENT = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 5h16v12H8l-4 4z"/></svg>';
+
+            function renderFeed(posts) {
+                feedEl.innerHTML = '';
+                if (!posts || !posts.length) {
+                    const empty = document.createElement('div');
+                    empty.className = 'feed-empty';
+                    empty.textContent = '还没有推文，发第一条吧';
+                    feedEl.appendChild(empty);
+                    return;
+                }
+                posts.forEach(function(p) { feedEl.appendChild(makePostCard(p)); });
+            }
+
+            function makePostCard(p) {
+                const card = document.createElement('div');
+                card.className = 'post';
+                card.dataset.id = p.id;
+
+                const head = document.createElement('div');
+                head.className = 'post-head';
+
+                const avatar = document.createElement('div');
+                avatar.className = 'post-avatar';
+                if (p.avatar) {
+                    avatar.style.backgroundImage = 'url(' + p.avatar + ')';
+                    avatar.classList.add('has-img');
+                } else {
+                    avatar.textContent = (p.name || '@').charAt(0).toUpperCase();
+                }
+                head.appendChild(avatar);
+
+                const meta = document.createElement('div');
+                meta.className = 'post-meta';
+                const authorRow = document.createElement('div');
+                authorRow.className = 'post-author-row';
+                const nameEl = document.createElement('span');
+                nameEl.className = 'post-name';
+                nameEl.textContent = p.name;
+                const idEl = document.createElement('span');
+                idEl.className = 'post-id';
+                idEl.textContent = '@' + p.author + ' · ' + timeAgo(p.ts);
+                authorRow.appendChild(nameEl);
+                authorRow.appendChild(idEl);
+                meta.appendChild(authorRow);
+                head.appendChild(meta);
+
+                // 认证标记（服务端没带 verified，这里用共享助手查）
+                VerifiedBadge.attach(nameEl, p.author);
+
+                // 自己的推文 → 删除按钮
+                if (p.author === myId) {
+                    const del = document.createElement('button');
+                    del.className = 'post-del';
+                    del.type = 'button';
+                    del.textContent = '删';
+                    del.title = '删除';
+                    head.appendChild(del);
+                }
+                card.appendChild(head);
+
+                const text = document.createElement('div');
+                text.className = 'post-text';
+                text.textContent = p.text;
+                card.appendChild(text);
+
+                // 操作行：点赞 / 评论
+                const actions = document.createElement('div');
+                actions.className = 'post-actions';
+
+                const likeBtn = document.createElement('button');
+                likeBtn.className = 'act' + (p.likedByMe ? ' liked' : '');
+                likeBtn.type = 'button';
+                likeBtn.innerHTML = ICON_LIKE + '<span class="act-num">' + p.likeCount + '</span>';
+                likeBtn.addEventListener('click', function() { toggleLike(card, p, likeBtn); });
+                actions.appendChild(likeBtn);
+
+                const cmtBtn = document.createElement('button');
+                cmtBtn.className = 'act';
+                cmtBtn.type = 'button';
+                cmtBtn.innerHTML = ICON_COMMENT + '<span class="act-num">' + p.commentCount + '</span>';
+                cmtBtn.addEventListener('click', function() { toggleComments(card, p); });
+                actions.appendChild(cmtBtn);
+
+                card.appendChild(actions);
+
+                // 评论区（懒加载）
+                const comments = document.createElement('div');
+                comments.className = 'post-comments';
+                comments.hidden = true;
+                card.appendChild(comments);
+
+                return card;
+            }
+
+            // 点赞 / 取消点赞
+            async function toggleLike(card, p, btn) {
+                try {
+                    const res = await fetch('/api/posts/like', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, postId: p.id, action: 'like' })
+                    });
+                    if (res.status === 401) { window.location.href = 'login.html'; return; }
+                    const data = await res.json();
+                    if (data.ok) {
+                        p.likedByMe = data.liked;
+                        p.likeCount = data.likeCount;
+                        btn.classList.toggle('liked', data.liked);
+                        btn.querySelector('.act-num').textContent = data.likeCount;
+                    }
+                } catch (e) {}
+            }
+
+            // 拉取并渲染评论（可复用：首次展开 / 发评论后刷新）
+            async function loadComments(box, p) {
+                box.innerHTML = '<div class="cmt-loading">加载评论…</div>';
+                try {
+                    const res = await fetch('/api/posts/comments?postId=' + encodeURIComponent(p.id) + '&token=' + encodeURIComponent(myToken));
+                    const data = await res.json();
+                    if (!data.ok) { box.innerHTML = '<div class="cmt-loading">评论加载失败</div>'; return; }
+                    renderComments(box, p, data.comments || []);
+                } catch (e) {
+                    box.innerHTML = '<div class="cmt-loading">评论加载失败</div>';
+                }
+            }
+
+            // 展开 / 收起评论区
+            async function toggleComments(card, p) {
+                const box = card.querySelector('.post-comments');
+                if (!box.hidden) { box.hidden = true; return; }
+                box.hidden = false;
+                loadComments(box, p);
+            }
+
+            function renderComments(box, p, comments) {
+                box.innerHTML = '';
+                if (comments.length) {
+                    comments.forEach(function(c) {
+                        const row = document.createElement('div');
+                        row.className = 'cmt-row';
+                        const head = document.createElement('span');
+                        head.className = 'cmt-author';
+                        head.textContent = c.name;
+                        const body = document.createElement('span');
+                        body.className = 'cmt-text';
+                        body.textContent = c.text;
+                        row.appendChild(head);
+                        row.appendChild(body);
+                        box.appendChild(row);
+                    });
+                } else {
+                    const empty = document.createElement('div');
+                    empty.className = 'cmt-loading';
+                    empty.textContent = '还没有评论';
+                    box.appendChild(empty);
+                }
+                // 评论输入框
+                const input = document.createElement('div');
+                input.className = 'cmt-input-row';
+                input.innerHTML = '<input type="text" class="cmt-input" maxlength="500" placeholder="写评论…">' +
+                    '<button type="button" class="cmt-send">发送</button>';
+                box.appendChild(input);
+                const inp = input.querySelector('.cmt-input');
+                const send = input.querySelector('.cmt-send');
+                send.addEventListener('click', function() { submitComment(box, p, inp, send); });
+                inp.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); submitComment(box, p, inp, send); }
+                });
+            }
+
+            async function submitComment(box, p, inp, send) {
+                const text = inp.value.trim();
+                if (!text) return;
+                send.disabled = true;
+                try {
+                    const res = await fetch('/api/posts/comment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, postId: p.id, action: 'comment', text: text })
+                    });
+                    if (res.status === 401) { window.location.href = 'login.html'; return; }
+                    const data = await res.json();
+                    if (data.ok) {
+                        inp.value = '';
+                        // 刷新评论（保持展开）
+                        loadComments(box, p);
+                        // 更新评论计数
+                        p.commentCount++;
+                        const nums = box.closest('.post').querySelectorAll('.act-num');
+                        if (nums[1]) nums[1].textContent = p.commentCount;
+                    }
+                } catch (e) {}
+                send.disabled = false;
+            }
+
+            // 删除推文
+            feedEl.addEventListener('click', function(e) {
+                const del = e.target.closest('.post-del');
+                if (!del) return;
+                const card = del.closest('.post');
+                const id = card.dataset.id;
+                if (!confirm('删除这条推文？')) return;
+                fetch('/api/posts?token=' + encodeURIComponent(myToken) + '&id=' + encodeURIComponent(id), { method: 'DELETE' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.ok) { card.remove(); }
+                    })
+                    .catch(function() {});
+            });
+
+            // 发推
+            composerInput.addEventListener('input', function() {
+                composerCount.textContent = composerInput.value.length + ' / ' + MAX_TEXT;
+            });
+            async function sendPost() {
+                const text = composerInput.value.trim();
+                if (!text) return;
+                composerSend.disabled = true;
+                try {
+                    const res = await fetch('/api/posts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, text: text })
+                    });
+                    if (res.status === 401) { window.location.href = 'login.html'; return; }
+                    const data = await res.json();
+                    if (data.ok) {
+                        composerInput.value = '';
+                        composerCount.textContent = '0 / ' + MAX_TEXT;
+                        loadFeed();
+                    } else {
+                        alert(data.message || '发送失败');
+                    }
+                } catch (e) {
+                    alert('网络异常');
+                }
+                composerSend.disabled = false;
+            }
+            composerSend.addEventListener('click', sendPost);
+            composerInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendPost(); }
+            });
+
+            // 拉取推文流
+            async function loadFeed() {
+                try {
+                    const res = await fetch('/api/posts?token=' + encodeURIComponent(myToken));
+                    if (res.status === 401) { window.location.href = 'login.html'; return; }
+                    const data = await res.json();
+                    if (data.ok) renderFeed(data.posts);
+                } catch (e) {
+                    feedEl.innerHTML = '<div class="feed-empty">加载失败</div>';
+                }
+            }
+            loadFeed();
+
+            // ---------- 下拉阻尼回弹 ----------
+            const scroller = document.querySelector('.plaza-content');
+            let pullStartY = 0, pulling = false;
+            scroller.addEventListener('touchstart', function(e) {
+                pulling = true;
+                pullStartY = e.touches[0].clientY;
+                feedEl.style.transition = 'none';
+            }, { passive: true });
+            scroller.addEventListener('touchmove', function(e) {
+                if (!pulling) return;
+                const dy = e.touches[0].clientY - pullStartY;
+                if (dy > 0 && scroller.scrollTop <= 0) {
+                    const offset = Math.pow(dy, 0.75);
+                    feedEl.style.transform = 'translateY(' + offset + 'px)';
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            function springBack() {
+                if (!pulling) return;
+                pulling = false;
+                feedEl.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
+                feedEl.style.transform = '';
+            }
+            scroller.addEventListener('touchend', springBack);
+            scroller.addEventListener('touchcancel', springBack);
         });
     </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-        html, body {
-            height: 100%;
-            overflow: hidden;
-            overscroll-behavior: none;
-        }
+        html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 
         body {
             display: flex;
@@ -130,7 +388,7 @@
             flex-direction: column;
             align-items: center;
             padding: 150px 20px 30px;
-            overflow-y: auto;          /* 推文多时可滚动，滚动只发生在内容区内部 */
+            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
         }
@@ -143,6 +401,180 @@
             min-height: 0;
         }
 
+        .feed-empty {
+            color: #666666;
+            font-size: 14px;
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        /* ---------- 发推框 ---------- */
+        .composer {
+            width: 100%;
+            max-width: 420px;
+            margin-bottom: 20px;
+        }
+
+        .composer-box {
+            border-bottom: 1px solid #ffffff;
+            padding-bottom: 10px;
+        }
+
+        .composer-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            color: #ffffff;
+            font-size: 15px;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        .composer-input::placeholder { color: #555555; }
+
+        .composer-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .composer-count { font-size: 12px; color: #555555; }
+
+        .composer-send {
+            width: 34px;
+            height: 34px;
+            border: 1px solid #ffffff;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .composer-send svg { width: 16px; height: 16px; stroke: #ffffff; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .composer-send:hover { background: #ffffff; }
+        .composer-send:hover svg { stroke: #000000; }
+        .composer-send:disabled { opacity: 0.4; pointer-events: none; }
+
+        /* ---------- 推文卡片 ---------- */
+        .post {
+            padding: 16px 0;
+            border-bottom: 1px solid #262626;
+        }
+
+        .post-head { display: flex; align-items: flex-start; gap: 10px; }
+
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .post-meta { flex: 1; min-width: 0; }
+
+        .post-author-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+        .post-name { font-size: 14px; font-weight: 700; color: #ffffff; }
+
+        .post-id { font-size: 12px; color: #666666; }
+
+        .post-del {
+            background: none;
+            border: none;
+            color: #555555;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 2px 6px;
+        }
+        .post-del:hover { color: #ffffff; }
+
+        .post-text {
+            color: #dddddd;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 10px 0 4px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .post-actions { display: flex; gap: 22px; margin-top: 8px; }
+
+        .act {
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #888888;
+            font-size: 13px;
+            padding: 4px 0;
+        }
+
+        .act svg { width: 18px; height: 18px; stroke: #888888; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.2s ease; }
+        .act:hover svg { stroke: #ffffff; }
+        .act.liked svg { stroke: #ffffff; fill: #ffffff; }
+        .act.liked { color: #ffffff; }
+        .act-num { color: inherit; }
+
+        /* ---------- 评论区 ---------- */
+        .post-comments {
+            margin-top: 10px;
+            padding: 10px 0 0 10px;
+            border-left: 1px solid #404040;
+        }
+
+        .cmt-loading { color: #555555; font-size: 13px; padding: 4px 0; }
+
+        .cmt-row { padding: 5px 0; font-size: 13px; line-height: 1.5; }
+
+        .cmt-author { color: #ffffff; font-weight: 700; margin-right: 8px; }
+
+        .cmt-text { color: #cccccc; word-break: break-word; }
+
+        .cmt-input-row { display: flex; gap: 8px; margin-top: 8px; }
+
+        .cmt-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #404040;
+            outline: none;
+            color: #ffffff;
+            font-size: 13px;
+            font-family: inherit;
+            padding: 4px 0;
+        }
+        .cmt-input:focus { border-bottom-color: #ffffff; }
+
+        .cmt-send {
+            background: none;
+            border: 1px solid #ffffff;
+            color: #ffffff;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 10px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .cmt-send:hover { background: #ffffff; color: #000000; }
+        .cmt-send:disabled { opacity: 0.4; pointer-events: none; }
+
+        /* ---------- 原有：返回 / 身份 / 侧边栏 / 底栏 ---------- */
         .back-link {
             position: fixed;
             top: 16px;
@@ -154,10 +586,7 @@
             transition: opacity 0.3s ease;
             z-index: 1000;
         }
-
-        .back-link:hover {
-            opacity: 0.7;
-        }
+        .back-link:hover { opacity: 0.7; }
 
         .me-info {
             position: fixed;
@@ -187,29 +616,12 @@
             background-position: center;
             transition: border-color 0.3s ease;
         }
+        .me-avatar:hover { border-color: #ffffff; }
 
-        .me-avatar:hover {
-            border-color: #ffffff;
-        }
+        .me-text { display: flex; flex-direction: column; gap: 2px; }
+        .me-name { font-size: 15px; color: #ffffff; font-weight: 700; }
+        .me-id { font-size: 12px; color: #888888; }
 
-        .me-text {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .me-name {
-            font-size: 15px;
-            color: #ffffff;
-            font-weight: 700;
-        }
-
-        .me-id {
-            font-size: 12px;
-            color: #888888;
-        }
-
-        /* 侧边栏 */
         .sidebar-overlay {
             position: fixed;
             inset: 0;
@@ -219,11 +631,7 @@
             transition: opacity 0.3s ease;
             z-index: 1999;
         }
-
-        .sidebar-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        .sidebar-overlay.show { opacity: 1; pointer-events: auto; }
 
         .sidebar {
             position: fixed;
@@ -240,10 +648,7 @@
             display: flex;
             flex-direction: column;
         }
-
-        .sidebar.open {
-            transform: translateX(0);
-        }
+        .sidebar.open { transform: translateX(0); }
 
         .sidebar-item {
             display: block;
@@ -253,10 +658,7 @@
             text-decoration: none;
             transition: background 0.2s ease;
         }
-
-        .sidebar-item:hover {
-            background: #1a1a1a;
-        }
+        .sidebar-item:hover { background: #1a1a1a; }
 
         .sidebar-close {
             position: absolute;
@@ -269,10 +671,7 @@
             cursor: pointer;
             padding: 4px 8px;
         }
-
-        .sidebar-close:hover {
-            color: #ffffff;
-        }
+        .sidebar-close:hover { color: #ffffff; }
 
         .sidebar-logout {
             margin-top: auto;
@@ -283,7 +682,6 @@
             font-family: inherit;
         }
 
-        /* 底部栏：竖线一分为二，左 chat 入口，右留空 */
         .bottom-bar {
             display: flex;
             height: 72px;
@@ -311,70 +709,28 @@
             fill: none;
             transition: stroke 0.3s ease;
         }
+        .bar-tab:hover { background: #ffffff; }
+        .bar-tab:hover svg { stroke: #000000; }
 
-        .bar-tab:hover {
-            background: #ffffff;
-        }
-
-        .bar-tab:hover svg {
-            stroke: #000000;
-        }
-
-        .bar-empty {
-            pointer-events: none;
-        }
-
-        /* 分隔竖线：短于底栏高度，居中 */
-        .bar-empty::before {
+        .bar-tab.active::after {
             content: '';
             position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 1px;
-            height: 26px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
             background: #ffffff;
         }
 
         @media (max-width: 768px) {
-            .plaza-content {
-                padding: 110px 16px 24px;
-            }
-
-            .back-link {
-                top: 10px;
-                left: 12px;
-                font-size: 11px;
-            }
-
-            .me-info {
-                top: 50px;
-                left: 12px;
-                gap: 8px;
-            }
-
-            .me-avatar {
-                width: 38px;
-                height: 38px;
-                font-size: 15px;
-            }
-
-            .me-name {
-                font-size: 14px;
-            }
-
-            .me-id {
-                font-size: 11px;
-            }
-
-            .bottom-bar {
-                height: 60px;
-            }
-
-            .bar-tab svg {
-                width: 22px;
-                height: 22px;
-            }
+            .plaza-content { padding: 110px 16px 24px; }
+            .back-link { top: 10px; left: 12px; font-size: 11px; }
+            .me-info { top: 50px; left: 12px; gap: 8px; }
+            .me-avatar { width: 38px; height: 38px; font-size: 15px; }
+            .me-name { font-size: 14px; }
+            .me-id { font-size: 11px; }
+            .bottom-bar { height: 60px; }
+            .bar-tab svg { width: 22px; height: 22px; }
         }
     </style>
 </head>
@@ -389,7 +745,6 @@
         </div>
     </div>
 
-    <!-- 侧边栏（点头像弹出） -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <div class="sidebar" id="sidebar">
         <button class="sidebar-close" id="sidebar-close" type="button">&times;</button>
@@ -397,19 +752,28 @@
         <button class="sidebar-item sidebar-logout" id="logout-sidebar-btn" type="button">退出登录</button>
     </div>
 
-    <!-- 广场内容区（推文列表，暂空） -->
     <div class="plaza-content">
+        <div class="composer">
+            <div class="composer-box">
+                <textarea class="composer-input" id="composer-input" maxlength="500" rows="2" placeholder="发点什么…"></textarea>
+                <div class="composer-footer">
+                    <span class="composer-count" id="composer-count">0 / 500</span>
+                    <button class="composer-send" id="composer-send" type="button" title="发送">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 19 L12 5"/><path d="M5 12 L12 5 L19 12"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="plaza-feed" id="plaza-feed"></div>
     </div>
 
-    <!-- 底部栏：竖线一分为二，左 chat 入口，当前页在右 -->
     <div class="bottom-bar">
         <a class="bar-tab" href="static.html" title="chat" aria-label="chat">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 4h16v12H8l-4 4z"/>
             </svg>
         </a>
-        <a class="bar-tab" href="plaza.html" title="plaza" aria-label="plaza">
+        <a class="bar-tab active" href="plaza.html" title="plaza" aria-label="plaza">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
                 <path d="M4.93 19.07a10 10 0 0 1 0-14.14"/>

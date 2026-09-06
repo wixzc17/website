@@ -1,29 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 512 512"
-     width="512"
-     height="512"
-     role="img"
-     aria-label="Lightning bolt in broken circle">
-  <!-- Recreated from the provided raster icon: white stroke on transparent background.
-       Use a dark backdrop when displaying if a black field is required. -->
-  <g fill="none"
-     stroke="#ffffff"
-     stroke-width="10"
-     stroke-linecap="butt"
-     stroke-linejoin="miter"
-     stroke-miterlimit="8">
-    <!-- Broken circle (two opposite ~166° arcs, gaps ~14°) -->
-    <path d="M 255.75 108.50 A 146.25 146.25 0 0 0 221.86 396.96"/>
-    <path d="M 257.02 401.00 A 146.25 146.25 0 0 0 290.89 112.72"/>
-    <!-- Lightning bolt (closed outline) -->
-    <path d="M 247.50 180.50
-             L 301.25 175.75
-             L 262.00 242.00
-             L 316.25 243.25
-             L 228.00 348.50
-             L 254.50 271.25
-             L 195.75 271.75
-             Z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 100 100">
+  <!-- 黑色背景 -->
+  <rect width="100%" height="100%" fill="#000000"/>
+  <!-- 白色四角星：中心更饱满，四端保持尖锐 -->
+  <path d="M50 8 L58 42 L92 50 L58 58 L50 92 L42 58 L8 50 L42 42 Z" fill="#ffffff"/>
 </svg>

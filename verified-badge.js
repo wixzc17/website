@@ -13,17 +13,12 @@
     var batch = {};          // id -> [resolveFn...]，等待合并的请求
     var batchScheduled = false;
 
-    // 小尺寸变体：圆心 / 环半径 / 闪电顶点与 verified.svg 完全一致
-    // 线宽 10 → 18、断口 ~14° → 22°（断口必须跟着线宽加宽，否则会被线帽吃掉）
-    // 线宽上限受闪电中缝限制：中段两个水平折返间距约 29 单位，
-    // 线宽超过约 21 就会把中缝填死、整块糊成白色（2026-09-06 实测）
+    // 认证标记：白色四角星（实心填充，源文件 verified.svg / auth.svg）
+    // 实心填充在小尺寸下天然清晰，不像之前的断环+闪电线条要纠结线宽和断口
     var BADGE_SVG =
-        '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-label="已认证">' +
-        '<g fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round">' +
-        '<path d="M 228.1 399.6 A 146.25 146.25 0 0 1 228.1 112.4"/>' +
-        '<path d="M 283.9 112.4 A 146.25 146.25 0 0 1 283.9 399.6"/>' +
-        '<path d="M 247.5 180.5 L 301.25 175.75 L 262 242 L 316.25 243.25 L 228 348.5 L 254.5 271.25 L 195.75 271.75 Z"/>' +
-        '</g></svg>';
+        '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="已认证">' +
+        '<path d="M50 8 L58 42 L92 50 L58 58 L50 92 L42 58 L8 50 L42 42 Z" fill="#ffffff"/>' +
+        '</svg>';
 
     // 样式只注入一次：尺寸跟随名字字号（em），无需每页写 CSS
     function ensureStyle() {

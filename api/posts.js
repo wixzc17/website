@@ -106,14 +106,39 @@ export default async function handler(request, response) {
     }
 
     try {
-        // ================= GET /api/posts —— 推文流 =================
-        if (request.method === 'GET' && !request.url.includes('/comments')) {
+        // ================= GET /api/posts —— 推文流 / 评论列表 =================
+        // 评论列表用 ?comments=<postId> 区分（子路径 /api/posts/comments 在 Vercel 上不会路由到本函数）
+        if (request.method === 'GET') {
             const url = new URL(request.url, 'https://x.local');
             const session = await parseToken(url.searchParams.get('token') || '');
             if (!session) {
                 return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
             }
 
+            // ---- 评论列表 ----
+            const commentsPostId = url.searchParams.get('comments') || '';
+            if (commentsPostId) {
+                if (!validPostId(commentsPostId)) {
+                    return response.status(400).json({ ok: false, message: '参数不合法' });
+                }
+                let comments = [];
+                try { comments = await readJSON('comment:' + commentsPostId, []); } catch (e) {}
+                if (!Array.isArray(comments)) comments = [];
+
+                const fromSet = [...new Set(comments.map(c => c && c.from).filter(Boolean))];
+                const nameMap = {};
+                await Promise.all(fromSet.map(async (f) => {
+                    const info = await resolveAuthor(f);
+                    nameMap[f] = info.name;
+                }));
+                const out = comments.map(c => ({
+                    id: c.id, from: c.from, text: c.text, ts: c.ts,
+                    name: nameMap[c.from] || ('@' + c.from)
+                }));
+                return response.status(200).json({ ok: true, comments: out });
+            }
+
+            // ---- 推文流 ----
             let feed = [];
             try { feed = await readJSON(FEED_KEY, []); } catch (e) { feed = []; }
             if (!Array.isArray(feed)) feed = [];
@@ -156,34 +181,6 @@ export default async function handler(request, response) {
             });
 
             return response.status(200).json({ ok: true, posts: posts });
-        }
-
-        // ================= GET /api/posts/comments —— 评论列表 =================
-        if (request.method === 'GET' && request.url.includes('/comments')) {
-            const url = new URL(request.url, 'https://x.local');
-            const session = await parseToken(url.searchParams.get('token') || '');
-            if (!session) {
-                return response.status(401).json({ ok: false, message: '登录已过期，请重新登录' });
-            }
-            const postId = url.searchParams.get('postId') || '';
-            if (!validPostId(postId)) {
-                return response.status(400).json({ ok: false, message: '参数不合法' });
-            }
-            let comments = [];
-            try { comments = await readJSON('comment:' + postId, []); } catch (e) {}
-            if (!Array.isArray(comments)) comments = [];
-
-            const fromSet = [...new Set(comments.map(c => c && c.from).filter(Boolean))];
-            const nameMap = {};
-            await Promise.all(fromSet.map(async (f) => {
-                const info = await resolveAuthor(f);
-                nameMap[f] = info.name;
-            }));
-            const out = comments.map(c => ({
-                id: c.id, from: c.from, text: c.text, ts: c.ts,
-                name: nameMap[c.from] || ('@' + c.from)
-            }));
-            return response.status(200).json({ ok: true, comments: out });
         }
 
         // ================= DELETE /api/posts —— 删自己的推文 =================

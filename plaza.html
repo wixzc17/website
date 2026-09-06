@@ -120,17 +120,17 @@
 
                 const meta = document.createElement('div');
                 meta.className = 'post-meta';
-                const authorRow = document.createElement('div');
-                authorRow.className = 'post-author-row';
+                const nameRow = document.createElement('div');
+                nameRow.className = 'post-name-row';
                 const nameEl = document.createElement('span');
                 nameEl.className = 'post-name';
                 nameEl.textContent = p.name;
-                const idEl = document.createElement('span');
+                nameRow.appendChild(nameEl);
+                const idEl = document.createElement('div');
                 idEl.className = 'post-id';
                 idEl.textContent = '@' + p.author + ' · ' + timeAgo(p.ts);
-                authorRow.appendChild(nameEl);
-                authorRow.appendChild(idEl);
-                meta.appendChild(authorRow);
+                meta.appendChild(nameRow);
+                meta.appendChild(idEl);
                 head.appendChild(meta);
 
                 // 认证标记（服务端没带 verified，这里用共享助手查）
@@ -184,7 +184,7 @@
             // 点赞 / 取消点赞
             async function toggleLike(card, p, btn) {
                 try {
-                    const res = await fetch('/api/posts/like', {
+                    const res = await fetch('/api/posts', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ token: myToken, postId: p.id, action: 'like' })
@@ -204,7 +204,7 @@
             async function loadComments(box, p) {
                 box.innerHTML = '<div class="cmt-loading">加载评论…</div>';
                 try {
-                    const res = await fetch('/api/posts/comments?postId=' + encodeURIComponent(p.id) + '&token=' + encodeURIComponent(myToken));
+                    const res = await fetch('/api/posts?comments=' + encodeURIComponent(p.id) + '&token=' + encodeURIComponent(myToken));
                     const data = await res.json();
                     if (!data.ok) { box.innerHTML = '<div class="cmt-loading">评论加载失败</div>'; return; }
                     renderComments(box, p, data.comments || []);
@@ -262,7 +262,7 @@
                 if (!text) return;
                 send.disabled = true;
                 try {
-                    const res = await fetch('/api/posts/comment', {
+                    const res = await fetch('/api/posts', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ token: myToken, postId: p.id, action: 'comment', text: text })
@@ -487,11 +487,11 @@
 
         .post-meta { flex: 1; min-width: 0; }
 
-        .post-author-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .post-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
         .post-name { font-size: 14px; font-weight: 700; color: #ffffff; }
 
-        .post-id { font-size: 12px; color: #666666; }
+        .post-id { font-size: 12px; color: #666666; margin-top: 2px; }
 
         .post-del {
             background: none;

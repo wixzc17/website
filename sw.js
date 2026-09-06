@@ -1,6 +1,6 @@
 // Static PWA Service Worker
-// 缓存静态资源，实现"可安装"能力；API 请求一律走网络不缓存
-const CACHE_NAME = 'static-pwa-v2';
+// HTML 页面用 network-first（每次拿最新版，离线才用缓存）；静态资源用 cache-first
+const CACHE_NAME = 'static-pwa-v3';
 const PRECACHE = [
   '/',
   '/index.html',
@@ -34,19 +34,38 @@ self.addEventListener('fetch', (event) => {
   // 跨域请求不缓存
   if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
+  const isHTML = event.request.mode === 'navigate' ||
+    url.pathname.endsWith('.html') ||
+    url.pathname === '/';
+
+  if (isHTML) {
+    // HTML 页面：network-first，保证每次都是最新版
+    event.respondWith(
+      fetch(event.request)
         .then((response) => {
-          // 只缓存成功的同源静态资源
           if (response.status === 200 && response.type === 'basic') {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
         })
-        .catch(() => cached);
-    })
-  );
+        .catch(() => caches.match(event.request))
+    );
+  } else {
+    // 静态资源（CSS/JS/图片）：cache-first
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request)
+          .then((response) => {
+            if (response.status === 200 && response.type === 'basic') {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            }
+            return response;
+          })
+          .catch(() => cached);
+      })
+    );
+  }
 });

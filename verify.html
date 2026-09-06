@@ -210,6 +210,9 @@
             }
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="/icon-512.png">
 </head>
 <body>
     <a class="back-link" href="static.html" id="back-link">← Static</a>
@@ -271,6 +274,11 @@
                     isSubscribe ? '订阅通道正在接入中，敬请期待' : '申请通道正在接入中，敬请期待';
             });
         });
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(function(){});
+    }
     </script>
 </body>
 </html>

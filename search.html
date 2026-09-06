@@ -559,6 +559,9 @@
             }
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="/icon-512.png">
 </head>
 <body>
     <a class="back-link" href="index.html">&larr; index</a>
@@ -579,5 +582,10 @@
         <div class="copyright copyright-zh">版权所有 &copy; 2026 任继锋、汪子雯 保留所有权利。</div>
         <div class="engine-credit">Powered by Bing</div>
     </div>
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(function(){});
+    }
+    </script>
 </body>
 </html>

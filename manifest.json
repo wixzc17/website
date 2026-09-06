@@ -1,0 +1,19 @@
+{
+  "name": "Static",
+  "short_name": "Static",
+  "description": "LoogArc 出品的极简加密通讯与推文广场",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

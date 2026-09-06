@@ -1305,6 +1305,9 @@
             }
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="/icon-512.png">
 </head>
 <body>
     <div class="chat-header">
@@ -1386,5 +1389,10 @@
         </div>
     </div>
 
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(function(){});
+    }
+    </script>
 </body>
 </html>

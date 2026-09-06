@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="Onv5dvEeBtqGzoOqpL2nEM">
+<head data-page-node-id="yTwOY54fFT8XTY7Eu8kxGa">
+    <meta charset="UTF-8" data-page-node-id="BheIZszpXGodsbr1RrGEGa">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="DlsUTVblPRwwaxP4VmtEZy">
+    <title>Static · 认证</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' data-page-node-id="yWTwCIPlKX094xGDlcAhob"><rect width='100' height='100' fill='%23000000' data-page-node-id="LngfodmN6ReRxjXe2styqE"/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive' data-page-node-id="9XifMBOZuiy12uOo5FeFHK">i</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000000;
+            font-family: Arial, sans-serif;
+        }
+
+        .verify-content {
+            flex: 1;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 70px 20px 40px;
+        }
+
+        .verify-header {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #333333;
+            padding-bottom: 18px;
+        }
+
+        .verify-title {
+            font-size: 32px;
+            font-weight: 700;
+            font-style: italic;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+
+        .verify-sub {
+            font-size: 14px;
+            color: #666666;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .verify-desc {
+            color: #999999;
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 32px;
+        }
+
+        /* 三档：移动端竖排（默认），PC 端 ≥900px 横排 */
+        .tier-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        @media (min-width: 900px) {
+            .tier-grid {
+                flex-direction: row;
+            }
+
+            .tier {
+                flex: 1 1 0;
+                min-width: 0;
+            }
+        }
+
+        .tier {
+            border: 1px solid #ffffff;
+            padding: 22px 20px;
+        }
+
+        .tier-name {
+            font-size: 22px;
+            font-weight: 700;
+            font-style: italic;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+            letter-spacing: 1px;
+        }
+
+        .tier-price {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #ffffff;
+            font-style: italic;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+        .tier-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .tier-btn {
+            flex: 1 1 140px;
+            padding: 8px 14px;
+            border: 1px solid #ffffff;
+            background: transparent;
+            color: #ffffff;
+            font-size: 13px;
+            letter-spacing: 1px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .tier-btn:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        /* 权限列表：每条前面一条灰色短横线（与 changelog 一致） */
+        .tier-list {
+            list-style: none;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid #333333;
+        }
+
+        .tier-list li {
+            padding-left: 16px;
+            position: relative;
+            margin-bottom: 8px;
+            color: #cccccc;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .tier-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 11px;
+            width: 6px;
+            height: 1px;
+            background: #666666;
+        }
+
+        .tier-soon {
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid #333333;
+            color: #666666;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .verify-note {
+            margin-top: 28px;
+            min-height: 20px;
+            color: #666666;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 16px;
+            left: 20px;
+            font-size: 13px;
+            color: #ffffff;
+            text-decoration: none;
+            letter-spacing: 0.5px;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-link:hover {
+            opacity: 0.7;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .copyright {
+            font-size: 14px;
+            color: #888888;
+            font-style: italic;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .verify-content {
+                padding: 56px 20px 30px;
+            }
+
+            .verify-title {
+                font-size: 26px;
+            }
+
+            .back-link {
+                top: 10px;
+                left: 12px;
+                font-size: 11px;
+            }
+
+            .copyright {
+                font-size: 12px;
+                line-height: 1.4;
+            }
+        }
+    </style>
+</head>
+<body data-page-node-id="ekvfWVabIWTkO9qJ9EPVyi">
+    <a class="back-link" href="static.html" onclick="if(history.length data-page-node-id="gMqnwx9MEXpz8OGn4D1EF9">1){history.back();return false;}">&larr; Static</a>
+
+    <div class="verify-content" data-page-node-id="nOsVe6vYCWxXnUy5qoDCp7">
+        <div class="verify-header" data-page-node-id="ddf6fMGgJ12XWeF1whDXgf">
+            <div class="verify-title" data-page-node-id="H14zjsnd36gAr99OGHRuoJ">verify</div>
+            <div class="verify-sub" data-page-node-id="UQV5zEFwC6mwGfJJE8EKax">Static 认证计划</div>
+        </div>
+
+        <p class="verify-desc" data-page-node-id="tqg2Sjz4Zak8oER5g1foIy">认证账号会在名字旁显示可信标记，并解锁更多能力。选择适合你的级别。</p>
+
+        <div class="tier-grid" data-page-node-id="GRylDJsrbVwQnGecuYYvAE">
+            <section class="tier" data-page-node-id="2iCLesnf0BDWlxudxcKfHV">
+                <div class="tier-name" data-page-node-id="gOvT5FTBzwikMKtMUigCtX">Base</div>
+                <div class="tier-price" data-page-node-id="f2hEtRmzxBQ3oM0Ub4lk7m">9.9¥/月</div>
+                <div class="tier-actions" data-page-node-id="OWxxvfhANGNAPgEI0uZsXZ">
+                    <button class="tier-btn" data-cta="subscribe" data-page-node-id="PhYRSiRtde4Vatvy17ji5J">订阅</button>
+                    <button class="tier-btn" data-cta="apply" data-page-node-id="gvs2aaSAbOYBLsvzw3P0zu">向官方申请</button>
+                </div>
+                <ul class="tier-list" data-page-node-id="NBgs7Wwjmqo5XezBr2zLsB">
+                    <li data-page-node-id="puuQjWsxzTxvREibvVRKYI">认证标记</li>
+                    <li data-page-node-id="qg3bzGIQYtRBmKvlk9JK0T">好友栏位上限 500</li>
+                    <li data-page-node-id="jFUEOEuUCzlRMCbPZI5s9O">可以发送推文</li>
+                    <li data-page-node-id="HFG5nHqJyexYLBQ0LzAnX3">可以对推文点赞与评论</li>
+                </ul>
+            </section>
+
+            <section class="tier" data-page-node-id="hf052tIa9DWHD77zCgwgTj">
+                <div class="tier-name" data-page-node-id="GACTqCM2D0BUI3OMelABez">Turbo</div>
+                <div class="tier-soon" data-page-node-id="3X76oAJXflbdGSBp41PEiM">还在开发中</div>
+            </section>
+
+            <section class="tier" data-page-node-id="GMOeV6ol6lc6DxC9OFJrBp">
+                <div class="tier-name" data-page-node-id="JZU1C2QXKih1gCESxBYCgX">Pro</div>
+                <div class="tier-soon" data-page-node-id="NcBOpsU2bx52kdOu4Szn8a">还在开发中</div>
+            </section>
+        </div>
+
+        <p class="verify-note" id="verify-note" data-page-node-id="W3YEgUWPbC9PxHLKE8GCUd"></p>
+    </div>
+
+    <div class="footer" data-page-node-id="ASFVvIpTS0GDjYHhrV4dTF">
+        <div class="copyright" data-page-node-id="MspfBHoFZJsVCKbOAwYzJW">Copyright &copy; 2026 Ren Jifeng &amp; Wang Ziwen. All rights reserved.</div>
+    </div>
+
+    <script>
+        // 两个按钮先只做壳：支付与申请流程后续接入，这里只给反馈不跳转
+        document.querySelectorAll('.tier-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const isSubscribe = btn.getAttribute('data-cta') === 'subscribe';
+                document.getElementById('verify-note').textContent =
+                    isSubscribe ? '订阅通道正在接入中，敬请期待' : '申请通道正在接入中，敬请期待';
+            });
+        });
+    </script>
+</body>
+</html>

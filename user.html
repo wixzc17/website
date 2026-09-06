@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static · 主页</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script src="/verified-badge.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
             const params = new URLSearchParams(window.location.search);
@@ -69,6 +70,21 @@
             }
 
             await loadAndRender();
+
+            // 认证状态：已认证 → 名字旁挂标记；未认证且是本人 → 显示「通过认证」入口框
+            // （别人逛主页时不给入口框，避免变成替他人开通）
+            VerifiedBadge.check(id).then(function (set) {
+                if (set.has(id)) {
+                    VerifiedBadge.attach(nameEl, id);
+                    return;
+                }
+                if (!isMe) return;
+                // 图标方法做了存在性判断：老版本 verified-badge.js 没有 svg()，
+                // 直接调用会抛错、连带整个入口框渲染不出来
+                var iconEl = document.getElementById('verify-cta-icon');
+                if (typeof VerifiedBadge.svg === 'function') iconEl.innerHTML = VerifiedBadge.svg();
+                document.getElementById('verify-cta').hidden = false;
+            }).catch(function () { /* 查不到认证状态就不显示入口，不影响其他功能 */ });
 
             if (!isMe) return;
 
@@ -363,16 +379,71 @@
             font-size: 22px;
             font-weight: 700;
             margin-top: 16px;
+            /* 只让文字本身可点：block 会撑满整行，点右侧空白也会弹出修改窗口 */
+            display: inline-block;
+            width: fit-content;
+            max-width: 100%;
         }
 
         .user-name.editable {
             cursor: pointer;
         }
 
+        /* 名字旁的认证标记不抢点击（否则本人点标记会弹出改名字浮窗） */
+        .user-name .verified-badge {
+            pointer-events: none;
+        }
+
+        /* 未认证时的「通过认证」入口框：白线直角框，悬停黑白反色 */
+        .verify-cta {
+            /* flex 而非 inline-flex：名字改成 inline-block 后，
+               入口框必须是块级才会换到下一行，否则会贴在同一行 */
+            display: flex;
+            width: fit-content;
+            align-items: center;
+            gap: 7px;
+            margin-top: 10px;
+            padding: 4px 10px;
+            border: 1px solid #ffffff;
+            color: #ffffff;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .verify-cta:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .verify-cta:hover .verify-cta-icon svg g {
+            stroke: #000000;
+        }
+
+        .verify-cta-icon {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+        }
+
+        .verify-cta-icon svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .verify-cta[hidden] {
+            display: none;
+        }
+
         .user-id {
             font-size: 13px;
             color: #666666;
             margin-top: 4px;
+            /* 同 user-name：只让文字本身可点 */
+            display: inline-block;
+            width: fit-content;
         }
 
         .user-id.editable {
@@ -572,6 +643,10 @@
     <div class="profile-card">
         <div class="user-avatar" id="user-avatar">@</div>
         <div class="user-name" id="user-name"></div>
+        <a class="verify-cta" id="verify-cta" href="verify.html" hidden>
+            <span class="verify-cta-icon" id="verify-cta-icon"></span>
+            <span>通过认证</span>
+        </a>
         <div class="user-id" id="user-id"></div>
         <div class="user-registered">
             <svg class="date-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" stroke-width="1.5" aria-hidden="true">

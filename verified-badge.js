@@ -73,6 +73,8 @@
     }
 
     window.VerifiedBadge = {
+        svg: function () { return BADGE_SVG; },   // 页面里单独放图标时用（如「通过认证」入口框）
+
         check: function (ids) {
             var self = this;
             var list = (Array.isArray(ids) ? ids : [ids])

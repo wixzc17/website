@@ -1,5 +1,15 @@
 /* Static 主题变量：夜间（默认）与日间两套配色
    由 theme.js 在 <html> 上设置 data-theme="dark"|"light" 来切换 */
+
+/* 全局盒模型 + 安卓安全区适配 */
+html { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+
+body {
+    /* 底部手势导航栏避让（安卓手势线/iPhone Home Indicator） */
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
 :root {
     --bg: #000000;
     --bg-soft: #0a0a0a;
@@ -35,7 +45,7 @@
 /* 主题切换按钮（theme.js 自动注入到 body） */
 .theme-toggle {
     position: fixed;
-    top: 14px;
+    top: calc(14px + env(safe-area-inset-top));
     right: 18px;
     z-index: 2001;
     width: 34px;
@@ -62,6 +72,6 @@
 .theme-toggle:hover { opacity: 0.7; }
 
 @media (max-width: 768px) {
-    .theme-toggle { top: 9px; right: 10px; }
+    .theme-toggle { top: calc(9px + env(safe-area-inset-top)); right: 10px; }
     .theme-toggle svg { width: 20px; height: 20px; }
 }

@@ -4,7 +4,7 @@
   <link rel="stylesheet" href="/theme.css">
   <script src="/theme.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>更新日志</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
     <style>
@@ -118,7 +118,7 @@
 
         .back-link {
             position: fixed;
-            top: 16px;
+            top: calc(16px + env(safe-area-inset-top));
             left: 20px;
             font-size: 13px;
             color: var(--fg);
@@ -156,7 +156,7 @@
             }
 
             .back-link {
-                top: 10px;
+                top: calc(10px + env(safe-area-inset-top));
                 left: 12px;
                 font-size: 11px;
             }

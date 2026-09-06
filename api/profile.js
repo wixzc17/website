@@ -100,9 +100,10 @@ export default async function handler(request, response) {
             const name = (profile && profile.name) || account.name || ('@' + id);
             const avatar = (profile && profile.avatar) || null;
             const banner = (profile && profile.banner) || null;
+            const bio = (profile && typeof profile.bio === 'string') ? profile.bio : '';
             // 注册日期：注册时写入 user:<id> 的 ts 时间戳（老硬编码账号无此字段）
             const registeredAt = (typeof account.ts === 'number' && account.ts > 0) ? account.ts : null;
-            return response.status(200).json({ ok: true, name: name, avatar: avatar, registeredAt: registeredAt, banner: banner });
+            return response.status(200).json({ ok: true, name: name, avatar: avatar, registeredAt: registeredAt, banner: banner, bio: bio });
         }
 
         if (request.method === 'POST') {
@@ -134,6 +135,14 @@ export default async function handler(request, response) {
                 }
             }
 
+            // 校验简介：undefined=不动；null/空串=清除；否则字符串且不超过 300 字
+            const bio = body ? body.bio : undefined;
+            if (bio !== null && bio !== undefined) {
+                if (typeof bio !== 'string' || bio.length > 300) {
+                    return response.status(400).json({ ok: false, message: '简介最长 300 字' });
+                }
+            }
+
             // 读取现有资料（保留未修改的字段）
             const existing = await readProfile(session.id);
             if (existing === undefined) {
@@ -144,9 +153,10 @@ export default async function handler(request, response) {
             profile.name = name;
             if (avatar !== undefined) profile.avatar = avatar; // null = 清除头像，undefined = 不动
             if (banner !== undefined) profile.banner = banner; // null = 清除背景图，undefined = 不动
+            if (bio !== undefined) profile.bio = (bio === null ? '' : bio);
 
             await writeProfile(session.id, profile);
-            return response.status(200).json({ ok: true, name: profile.name, avatar: profile.avatar || null, banner: profile.banner || null });
+            return response.status(200).json({ ok: true, name: profile.name, avatar: profile.avatar || null, banner: profile.banner || null, bio: typeof profile.bio === 'string' ? profile.bio : '' });
         }
 
         return response.status(405).json({ ok: false, message: '方法不允许' });

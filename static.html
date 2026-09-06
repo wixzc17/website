@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script src="/verified-badge.js"></script>
     <script>
         // 共享加密工具：AES-GCM 加解密（浏览器本地完成，密文上链）
         // 密钥由双方约定，写在这里会暴露——改为从登录用户可获取的约定值派生：
@@ -179,6 +180,8 @@
                             avatar.textContent = p.name.charAt(0).toUpperCase();
                         }
                     }
+                    // 认证标记（在名字定稿之后插入，避免被 textContent 覆盖清掉）
+                    VerifiedBadge.attach(nameEl, id);
                 });
             });
 
@@ -497,6 +500,7 @@
                     addIncoming.appendChild(row);
                     loadUserProfile(from).then(p => {
                         if (p) fillUserRow(row, p.name, p.avatar);
+                        VerifiedBadge.attach(row.querySelector('.add-user-name'), from);
                     });
                 });
             }
@@ -559,6 +563,7 @@
                     addSearchResults.appendChild(row);
                     loadUserProfile(u.id).then(p => {
                         if (p) fillUserRow(row, p.name, p.avatar);
+                        VerifiedBadge.attach(row.querySelector('.add-user-name'), u.id);
                     });
                 });
                 } catch (e) {

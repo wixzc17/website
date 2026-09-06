@@ -8,6 +8,7 @@
     <title>Static · 主页</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
     <script src="/verified-badge.js"></script>
+    <script src="/label-badge.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
             const params = new URLSearchParams(window.location.search);
@@ -91,14 +92,14 @@
             VerifiedBadge.check(id).then(function (set) {
                 // 创始人：硬编码优先，文案特殊处理
                 if (FOUNDER_VERIFIED[id]) {
-                    VerifiedBadge.attach(nameEl, id);
+                    VerifiedBadge.attach(nameEl, id).then(function () { LabelBadge.attach(nameEl, id); });
                     verifiedText.textContent = '此账号似乎在很久很久以前......获得了无限期的个人认证(这很可能是程序漏洞，我们会尽快修复！）';
                     verifiedEl.hidden = false;
                     return;
                 }
                 // 普通已认证用户：从 KV 读授予时间戳和类型
                 if (set.has(id)) {
-                    VerifiedBadge.attach(nameEl, id);
+                    VerifiedBadge.attach(nameEl, id).then(function () { LabelBadge.attach(nameEl, id); });
                     fetch('/api/verified?id=' + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (d) {
                         if (d.ok && d.verified && d.ts) {
                             var date = new Date(d.ts);
@@ -109,6 +110,8 @@
                     });
                     return;
                 }
+                // 未认证用户也可能被授予标记（企业可给个人账号打标），独立挂载
+                LabelBadge.attach(nameEl, id);
                 // 未认证且是本人 → 显示「通过认证」入口框
                 if (!isMe) return;
                 var iconEl = document.getElementById('verify-cta-icon');
@@ -331,6 +334,145 @@
             // ---------- ID 提示 ----------
             idEl.addEventListener('click', function() { openModal(idModal); });
 
+            // ---------- 标记管理（企业认证本人 / 站长） ----------
+            var LABEL_ADMINS = ['wixzc17', 'lixs17'];
+            var labelManage = document.getElementById('label-manage');
+            var labelGrantCta = document.getElementById('label-grant-cta');
+            var labelGrantedSection = document.getElementById('label-granted-section');
+            var labelGrantedList = document.getElementById('label-granted-list');
+            var labelAdminSection = document.getElementById('label-admin-section');
+            var labelAdminList = document.getElementById('label-admin-list');
+            var labelGrantModal = document.getElementById('modal-label-grant');
+            var labelTargetInput = document.getElementById('label-target-input');
+            var labelGrantError = document.getElementById('label-grant-error');
+
+            function labelRowHtml(targetId, grantedBy, ts) {
+                var date = ts ? new Date(ts).toLocaleDateString('zh-CN') : '';
+                var meta = grantedBy ? ('由 @' + grantedBy + ' 授予' + (date ? ' · ' + date : '')) : '';
+                return '<div class="label-row">' +
+                    '<div><span class="label-row-id">@' + targetId + '</span>' +
+                    (meta ? ' <span class="label-row-meta">' + meta + '</span>' : '') + '</div>' +
+                    '<button class="label-revoke-btn" type="button" data-revoke="' + targetId + '">撤销</button>' +
+                    '</div>';
+            }
+
+            function renderLabelList(container, items, emptyText) {
+                if (!items.length) {
+                    container.innerHTML = '<div class="label-empty">' + emptyText + '</div>';
+                    return;
+                }
+                container.innerHTML = items.map(function (x) {
+                    return labelRowHtml(x.targetId, x.grantedBy, x.ts);
+                }).join('');
+            }
+
+            async function loadGrantedList() {
+                try {
+                    var res = await fetch('/api/labels?by=' + encodeURIComponent(myId) + '&token=' + encodeURIComponent(myToken));
+                    var data = await res.json();
+                    if (!data.ok) return;
+                    var targets = data.targets || [];
+                    if (!targets.length) {
+                        renderLabelList(labelGrantedList, [], '还没有授予任何标记');
+                    } else {
+                        // 批量拿每条标记的 grantedBy / ts
+                        var q = await fetch('/api/labels?ids=' + encodeURIComponent(targets.join(','))).then(function (r) { return r.json(); });
+                        var map = (q.ok && q.labels) ? q.labels : {};
+                        var items = targets.map(function (t) {
+                            var rec = map[t] || {};
+                            return { targetId: t, grantedBy: rec.grantedBy || myId, ts: rec.ts };
+                        });
+                        renderLabelList(labelGrantedList, items, '');
+                    }
+                    labelGrantedSection.hidden = false;
+                } catch (e) {}
+            }
+
+            async function loadAdminList() {
+                try {
+                    var res = await fetch('/api/labels?all=1&token=' + encodeURIComponent(myToken));
+                    var data = await res.json();
+                    if (!data.ok) return;
+                    renderLabelList(labelAdminList, data.labels || [], '全站暂无标记');
+                    labelAdminSection.hidden = false;
+                } catch (e) {}
+            }
+
+            async function initLabelManage() {
+                var isAdmin = LABEL_ADMINS.indexOf(myId) !== -1;
+                var isBusiness = false;
+                try {
+                    var v = await fetch('/api/verified?id=' + encodeURIComponent(myId)).then(function (r) { return r.json(); });
+                    isBusiness = !!(v.ok && v.verified && v.type === 'business');
+                } catch (e) {}
+                if (!isBusiness && !isAdmin) return;
+                labelManage.hidden = false;
+                if (isBusiness) {
+                    labelGrantCta.hidden = false;
+                    loadGrantedList();
+                }
+                if (isAdmin) loadAdminList();
+            }
+
+            labelGrantCta.addEventListener('click', function () {
+                labelTargetInput.value = '';
+                labelGrantError.textContent = '';
+                openModal(labelGrantModal);
+            });
+
+            document.getElementById('label-grant-save').addEventListener('click', async function () {
+                var btn = this;
+                var targetId = labelTargetInput.value.trim().replace(/^@/, '');
+                if (!/^[a-zA-Z0-9]+$/.test(targetId)) {
+                    labelGrantError.textContent = 'ID 不合法（仅字母数字）';
+                    return;
+                }
+                btn.disabled = true;
+                labelGrantError.textContent = '';
+                try {
+                    var res = await fetch('/api/labels', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, targetId: targetId, action: 'grant' })
+                    });
+                    var data = await res.json();
+                    if (data.ok) {
+                        closeModal();
+                        loadGrantedList();
+                    } else {
+                        labelGrantError.textContent = data.message || '授予失败';
+                    }
+                } catch (e) {
+                    labelGrantError.textContent = '网络异常';
+                }
+                btn.disabled = false;
+            });
+
+            // 撤销（事件委托：已授予列表 + 站长全局列表共用）
+            document.addEventListener('click', async function (e) {
+                var btn = e.target.closest ? e.target.closest('[data-revoke]') : null;
+                if (!btn) return;
+                var targetId = btn.getAttribute('data-revoke');
+                btn.disabled = true;
+                try {
+                    var res = await fetch('/api/labels', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: myToken, targetId: targetId, action: 'revoke' })
+                    });
+                    var data = await res.json();
+                    if (data.ok) {
+                        if (!labelGrantedSection.hidden) loadGrantedList();
+                        if (!labelAdminSection.hidden) loadAdminList();
+                    } else {
+                        alert(data.message || '撤销失败');
+                    }
+                } catch (e) {
+                    alert('网络异常');
+                }
+                btn.disabled = false;
+            });
+
+            initLabelManage();
+
             // ---------- 返回：有历史则后退，否则回码表 ----------
             // 内联 onclick 里的 history.length>1 的「>」会被 HTML 注入器误判为标签结束，
             // 导致「出现代码」，故改用脚本绑定（2026-09-06 实测踩坑）
@@ -471,6 +613,100 @@
 
         .verify-cta[hidden] {
             display: none;
+        }
+
+        /* ---------- 标记管理 ---------- */
+        .label-manage {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-strong);
+        }
+
+        .label-grant-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            border: 1px solid var(--fg);
+            background: var(--bg);
+            color: var(--fg);
+            font-size: 13px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .label-grant-btn:hover {
+            background: var(--fg);
+            color: var(--bg);
+        }
+
+        .label-section {
+            margin-top: 18px;
+        }
+
+        .label-section-title {
+            font-size: 12px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .label-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .label-row-id {
+            font-size: 14px;
+            color: var(--fg);
+        }
+
+        .label-row-meta {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .label-revoke-btn {
+            flex-shrink: 0;
+            border: 1px solid var(--border-strong);
+            background: var(--bg);
+            color: var(--text-mid);
+            font-size: 12px;
+            padding: 4px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .label-revoke-btn:hover:not(:disabled) {
+            border-color: var(--fg);
+            color: var(--fg);
+        }
+
+        .label-revoke-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .label-empty {
+            font-size: 13px;
+            color: var(--text-dim);
+            padding: 8px 0;
+        }
+
+        .label-grant-error {
+            font-size: 12px;
+            color: #aa6666;
+            margin-top: 8px;
+            min-height: 16px;
         }
 
         .user-id {
@@ -717,6 +953,19 @@
             </svg>
             <span class="user-verified-text" id="user-verified-text"></span>
         </div>
+
+        <!-- 标记管理（仅企业认证本人 / 站长可见，JS 控制显示） -->
+        <div class="label-manage" id="label-manage" hidden>
+            <button class="label-grant-btn" id="label-grant-cta" type="button" hidden>授予标记</button>
+            <div class="label-section" id="label-granted-section" hidden>
+                <div class="label-section-title">我已授予的标记</div>
+                <div class="label-list" id="label-granted-list"></div>
+            </div>
+            <div class="label-section" id="label-admin-section" hidden>
+                <div class="label-section-title">全部标记（站长管理）</div>
+                <div class="label-list" id="label-admin-list"></div>
+            </div>
+        </div>
     </div>
 
     <div class="edit-overlay" id="edit-overlay"></div>
@@ -765,6 +1014,22 @@
             <div class="id-tip">账号 ID 是唯一标识，注册后无法更改。</div>
             <div class="modal-actions">
                 <button class="modal-btn" type="button" data-close>知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 授予标记浮窗 -->
+    <div class="modal" id="modal-label-grant">
+        <div class="modal-head">
+            <div class="modal-title">授予标记</div>
+            <button class="modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="id-tip" style="margin-bottom:12px">输入目标账号 ID。授予后，该账号用户名旁会显示你的头像作为组织归属标记。</div>
+            <input type="text" class="name-edit-input" id="label-target-input" maxlength="32" placeholder="目标账号 ID" autocomplete="off">
+            <div class="label-grant-error" id="label-grant-error"></div>
+            <div class="modal-actions">
+                <button class="modal-btn" type="button" id="label-grant-save">授予</button>
             </div>
         </div>
     </div>

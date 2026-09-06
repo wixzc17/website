@@ -8,6 +8,7 @@
     <title>Static</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
     <script src="/verified-badge.js"></script>
+    <script src="/label-badge.js"></script>
     <script>
         // 共享加密工具：AES-GCM 加解密（浏览器本地完成，密文上链）
         // 密钥由双方约定，写在这里会暴露——改为从登录用户可获取的约定值派生：
@@ -92,7 +93,7 @@
                         meAvatar.classList.add('has-img');
                     }
                 }
-                VerifiedBadge.attach(document.getElementById('me-name'), myId);
+                VerifiedBadge.attach(document.getElementById('me-name'), myId).then(function () { LabelBadge.attach(document.getElementById('me-name'), myId); });
             });
 
             // 未读请求角标：白色圆圈数字，仅统计「看过之后」新来的未处理请求
@@ -184,7 +185,7 @@
                         }
                     }
                     // 认证标记（在名字定稿之后插入，避免被 textContent 覆盖清掉）
-                    VerifiedBadge.attach(nameEl, id);
+                    VerifiedBadge.attach(nameEl, id).then(function () { LabelBadge.attach(nameEl, id); });
                 });
             });
 
@@ -503,7 +504,7 @@
                     addIncoming.appendChild(row);
                     loadUserProfile(from).then(p => {
                         if (p) fillUserRow(row, p.name, p.avatar);
-                        VerifiedBadge.attach(row.querySelector('.add-user-name'), from);
+                        VerifiedBadge.attach(row.querySelector('.add-user-name'), from).then(function () { LabelBadge.attach(row.querySelector('.add-user-name'), from); });
                     });
                 });
             }
@@ -566,7 +567,7 @@
                     addSearchResults.appendChild(row);
                     loadUserProfile(u.id).then(p => {
                         if (p) fillUserRow(row, p.name, p.avatar);
-                        VerifiedBadge.attach(row.querySelector('.add-user-name'), u.id);
+                        VerifiedBadge.attach(row.querySelector('.add-user-name'), u.id).then(function () { LabelBadge.attach(row.querySelector('.add-user-name'), u.id); });
                     });
                 });
                 } catch (e) {

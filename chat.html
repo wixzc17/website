@@ -9,6 +9,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
     <script src="/static-crypto.js"></script>
     <script src="/verified-badge.js"></script>
+    <script src="/label-badge.js"></script>
     <script>
         // 共享加密工具（与 static.html 保持一致的派生方式）
         const StaticCrypto = {
@@ -139,7 +140,7 @@
                 }
             }
             // 认证标记（在名字定稿之后插入，避免被 textContent 覆盖清掉）
-            VerifiedBadge.attach(document.getElementById('peer-name'), peerId);
+            VerifiedBadge.attach(document.getElementById('peer-name'), peerId).then(function () { LabelBadge.attach(document.getElementById('peer-name'), peerId); });
 
             // 消息密钥：优先 v2 会话密钥（与密码无关）；任一方没有身份密钥时回退旧算法
             const legacyKey = await legacyKeyOf(myId, peerId, myHash);

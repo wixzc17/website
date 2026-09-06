@@ -1,6 +1,6 @@
 // Static PWA Service Worker
 // HTML 页面用 network-first（每次拿最新版，离线才用缓存）；静态资源用 cache-first
-const CACHE_NAME = 'static-pwa-v3';
+const CACHE_NAME = 'static-pwa-v4';
 const PRECACHE = [
   '/',
   '/index.html',

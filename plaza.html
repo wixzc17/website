@@ -8,6 +8,7 @@
     <title>Static · 广场</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
     <script src="/verified-badge.js"></script>
+    <script src="/label-badge.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const myId = sessionStorage.getItem('static_id');
@@ -53,7 +54,7 @@
                         meAvatar.classList.add('has-img');
                     }
                 }
-                VerifiedBadge.attach(document.getElementById('me-name'), myId);
+                VerifiedBadge.attach(document.getElementById('me-name'), myId).then(function () { LabelBadge.attach(document.getElementById('me-name'), myId); });
             });
 
             document.getElementById('logout-sidebar-btn').addEventListener('click', function() {
@@ -137,7 +138,7 @@
                 head.appendChild(meta);
 
                 // 认证标记（服务端没带 verified，这里用共享助手查）
-                VerifiedBadge.attach(nameEl, p.author);
+                VerifiedBadge.attach(nameEl, p.author).then(function () { LabelBadge.attach(nameEl, p.author); });
 
                 // 自己的推文 → 删除按钮
                 if (p.author === myId) {

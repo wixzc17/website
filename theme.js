@@ -14,6 +14,18 @@
     var cur = resolve();
     // 立即设置，避免页面先按默认夜间渲染再闪一下
     document.documentElement.setAttribute('data-theme', cur);
+    setMetaThemeColor(cur);
+
+    // 同步状态栏颜色（PWA/浏览器顶部状态栏跟随日间/夜间主题）
+    function setMetaThemeColor(theme) {
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) {
+            meta = document.createElement('meta');
+            meta.name = 'theme-color';
+            document.head.appendChild(meta);
+        }
+        meta.content = theme === 'light' ? '#ffffff' : '#000000';
+    }
 
     var ICONS = {
         dark: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 14.5 A8 8 0 1 1 9.5 4 A6.5 6.5 0 0 0 20 14.5 Z"/></svg>',
@@ -30,6 +42,7 @@
     window.toggleTheme = function () {
         cur = cur === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', cur);
+        setMetaThemeColor(cur);
         try { localStorage.setItem(KEY, cur); } catch (e) {}
         paint();
     };
@@ -41,6 +54,7 @@
         if (!s) {
             cur = resolve();
             document.documentElement.setAttribute('data-theme', cur);
+            setMetaThemeColor(cur);
             paint();
         }
     });

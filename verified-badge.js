@@ -25,8 +25,8 @@
             var style = document.createElement('style');
             style.id = 'verified-badge-style';
             style.textContent =
-                '.verified-badge{display:inline-block;width:1.5em;height:1.5em;margin-left:0.28em;' +
-                'vertical-align:-0.14em}' +
+                '.verified-badge{display:inline-block;width:1.8em;height:1.8em;margin-left:0.3em;' +
+                'vertical-align:-0.18em}' +
                 '.verified-badge svg{display:block;width:100%;height:100%}';
             document.head.appendChild(style);
         }

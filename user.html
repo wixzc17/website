@@ -119,6 +119,24 @@
                 document.getElementById('verify-cta').hidden = false;
             }).catch(function () { /* 查不到认证状态就不显示入口，不影响其他功能 */ });
 
+            // 隶属信息：有标记则在信息区显示「（方框标记）此账号隶属于 xxx」
+            LabelBadge.check([id]).then(function (map) {
+                var rec = map.get(id);
+                if (!rec) return;
+                var badgeEl = document.getElementById('user-label-badge');
+                if (rec.grantedByAvatar) {
+                    var img = document.createElement('img');
+                    img.src = rec.grantedByAvatar;
+                    img.alt = '@' + rec.grantedBy;
+                    badgeEl.appendChild(img);
+                } else {
+                    badgeEl.textContent = rec.grantedBy.charAt(0).toUpperCase();
+                }
+                document.getElementById('user-label-text').textContent =
+                    '此账号隶属于 ' + (rec.grantedByName || rec.grantedBy);
+                document.getElementById('user-label').hidden = false;
+            }).catch(function () { /* 查不到标记就不显示隶属行 */ });
+
             if (!isMe) return;
 
             // ---------- 自己的主页：元素可点击 ----------
@@ -772,6 +790,47 @@
             letter-spacing: 0.5px;
         }
 
+        /* ---------- 隶属信息行 ---------- */
+        .user-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .user-label[hidden] {
+            display: none;
+        }
+
+        .user-label-badge {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--fg);
+            border-radius: 0.2em;
+            overflow: hidden;
+            background: var(--bg);
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+        }
+
+        .user-label-badge img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-label-text {
+            font-size: 14px;
+            color: var(--fg);
+            letter-spacing: 0.5px;
+        }
+
         /* ---------- 编辑浮窗 ---------- */
         .edit-overlay {
             position: fixed;
@@ -969,6 +1028,12 @@
                 <path d="M12 3 L13.5 10.5 L21 12 L13.5 13.5 L12 21 L10.5 13.5 L3 12 L10.5 10.5 Z"/>
             </svg>
             <span class="user-verified-text" id="user-verified-text"></span>
+        </div>
+
+        <!-- 隶属信息：有标记时显示「（方框标记）此账号隶属于 xxx」 -->
+        <div class="user-label" id="user-label" hidden>
+            <span class="user-label-badge" id="user-label-badge"></span>
+            <span class="user-label-text" id="user-label-text"></span>
         </div>
 
         <!-- 标记管理（仅企业认证本人 / 站长可见，JS 控制显示） -->

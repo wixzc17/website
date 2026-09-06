@@ -13,7 +13,7 @@
 //
 // 接口：
 //   GET  /api/labels?ids=a,b,c
-//        公开批量查，返回 { ok, labels: { a: { grantedBy, ts, grantedByAvatar }, ... } }
+//        公开批量查，返回 { ok, labels: { a: { grantedBy, ts, grantedByAvatar, grantedByName }, ... } }
 //   GET  /api/labels?by=<企业ID>&token=<企业自己的token>
 //        企业查自己授予过的所有标记，返回 { ok, grantedBy, targets: [targetId, ...] }
 //        站长调用时 by 可以是任何企业 ID
@@ -95,15 +95,18 @@ export default async function handler(request, response) {
         }
     }
 
-    // 读头像（profile:<id>.avatar），失败返回 null
-    async function readAvatar(id) {
+    // 读授予方信息（profile:<id> 的头像+显示名），失败返回 { avatar:null, name:null }
+    async function readGranter(id) {
         try {
             const res = await fetch(KV_URL + encodeURIComponent('profile:' + id), { headers: KV_AUTH });
-            if (!res.ok) return null;
+            if (!res.ok) return { avatar: null, name: null };
             const data = await res.json();
-            return (data && typeof data.avatar === 'string') ? data.avatar : null;
+            return {
+                avatar: (data && typeof data.avatar === 'string') ? data.avatar : null,
+                name: (data && typeof data.name === 'string' && data.name) ? data.name : null
+            };
         } catch (e) {
-            return null;
+            return { avatar: null, name: null };
         }
     }
 
@@ -200,23 +203,25 @@ export default async function handler(request, response) {
             }
 
             const labelList = await Promise.all(ids.map(id => readLabel(id)));
-            // 收集所有授予方 ID，批量拿头像（去重）
+            // 收集所有授予方 ID，批量拿头像+显示名（去重）
             const granterIds = Array.from(new Set(
                 labelList.filter(x => x !== null).map(x => x.grantedBy)
             ));
-            const avatarMap = {};
+            const granterMap = {};
             await Promise.all(granterIds.map(async gid => {
-                avatarMap[gid] = await readAvatar(gid);
+                granterMap[gid] = await readGranter(gid);
             }));
 
             const labels = {};
             ids.forEach((id, i) => {
                 const rec = labelList[i];
                 if (rec !== null) {
+                    const g = granterMap[rec.grantedBy] || { avatar: null, name: null };
                     labels[id] = {
                         grantedBy: rec.grantedBy,
                         ts: rec.ts,
-                        grantedByAvatar: avatarMap[rec.grantedBy] || null
+                        grantedByAvatar: g.avatar || null,
+                        grantedByName: g.name || null
                     };
                 }
             });

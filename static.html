@@ -451,6 +451,33 @@
                 return row;
             }
 
+            // 拉取用户资料（昵称 + 头像）
+            async function loadUserProfile(id) {
+                try {
+                    const res = await fetch('/api/profile?id=' + encodeURIComponent(id));
+                    const data = await res.json();
+                    if (data.ok) return { name: data.name, avatar: data.avatar };
+                } catch (e) {}
+                return null;
+            }
+
+            // 用资料回填已渲染的行（昵称 + 头像）
+            function fillUserRow(row, name, avatar) {
+                if (!name) return;
+                const avatarEl = row.querySelector('.add-user-avatar');
+                const nameEl = row.querySelector('.add-user-name');
+                if (nameEl) nameEl.textContent = name;
+                if (avatarEl) {
+                    if (avatar) {
+                        avatarEl.textContent = '';
+                        avatarEl.style.backgroundImage = 'url(' + avatar + ')';
+                    } else {
+                        avatarEl.style.backgroundImage = '';
+                        avatarEl.textContent = name.charAt(0).toUpperCase();
+                    }
+                }
+            }
+
             function renderIncoming(incoming) {
                 addIncoming.innerHTML = '';
                 if (!incoming.length) {
@@ -467,6 +494,9 @@
                         '<button class="add-action-btn" data-act="accept" data-id="' + from + '">同意</button>' +
                         '<button class="add-action-btn" data-act="reject" data-id="' + from + '">拒绝</button>');
                     addIncoming.appendChild(row);
+                    loadUserProfile(from).then(p => {
+                        if (p) fillUserRow(row, p.name, p.avatar);
+                    });
                 });
             }
 
@@ -482,6 +512,9 @@
                 outgoing.forEach(id => {
                     const row = makeUserRow(id, null, '<span style="font-size:12px;color:#666666">等待处理</span>');
                     addOutgoing.appendChild(row);
+                    loadUserProfile(id).then(p => {
+                        if (p) fillUserRow(row, p.name, p.avatar);
+                    });
                 });
             }
 
@@ -518,12 +551,15 @@
                         return;
                     }
                     addSearchResults.innerHTML = '';
-                    data.users.forEach(u => {
-                        if (u.id === myId) return; // 不显示自己
-                        const row = makeUserRow(u.id, u.name,
-                            '<button class="add-action-btn" data-add="' + u.id + '">添加</button>');
-                        addSearchResults.appendChild(row);
+                data.users.forEach(u => {
+                    if (u.id === myId) return; // 不显示自己
+                    const row = makeUserRow(u.id, u.name,
+                        '<button class="add-action-btn" data-add="' + u.id + '">添加</button>');
+                    addSearchResults.appendChild(row);
+                    loadUserProfile(u.id).then(p => {
+                        if (p) fillUserRow(row, p.name, p.avatar);
                     });
+                });
                 } catch (e) {
                     addSearchResults.innerHTML = '<div class="add-empty">网络异常</div>';
                 }

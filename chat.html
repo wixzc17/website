@@ -110,6 +110,7 @@
 
             document.getElementById('peer-name').textContent = '@' + peerId;
             document.getElementById('peer-id').textContent = '@' + peerId;
+            document.getElementById('peer-info').href = 'user.html?id=' + encodeURIComponent(peerId);
 
             // 双方资料缓存（消息区头像用：头像图片或名字首字符）
             const profiles = {}; // id -> { name, avatar }
@@ -124,7 +125,16 @@
             // 先拉齐双方资料再渲染消息（否则头像竞态会回退显示「@」）
             await Promise.all([loadProfile(peerId), loadProfile(myId)]);
             const peerP = profiles[peerId];
-            if (peerP) document.getElementById('peer-name').textContent = peerP.name;
+            if (peerP) {
+                document.getElementById('peer-name').textContent = peerP.name;
+                const peerAvatar = document.getElementById('peer-avatar');
+                if (peerP.avatar) {
+                    peerAvatar.textContent = '';
+                    peerAvatar.style.backgroundImage = 'url(' + peerP.avatar + ')';
+                } else {
+                    peerAvatar.textContent = peerP.name.charAt(0).toUpperCase();
+                }
+            }
 
             // 消息密钥：优先 v2 会话密钥（与密码无关）；任一方没有身份密钥时回退旧算法
             const legacyKey = await legacyKeyOf(myId, peerId, myHash);
@@ -604,6 +614,30 @@
         }
 
         .peer-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .peer-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .peer-text {
             display: flex;
             flex-direction: column;
         }
@@ -1270,10 +1304,13 @@
 <body>
     <div class="chat-header">
         <a class="back-link" href="static.html">&lt;</a>
-        <div class="peer-info">
-            <div class="peer-name" id="peer-name"></div>
-            <div class="peer-id" id="peer-id"></div>
-        </div>
+        <a class="peer-info" id="peer-info" href="#">
+            <div class="peer-avatar" id="peer-avatar">@</div>
+            <div class="peer-text">
+                <div class="peer-name" id="peer-name"></div>
+                <div class="peer-id" id="peer-id"></div>
+            </div>
+        </a>
     </div>
 
     <div class="messages" id="messages"></div>

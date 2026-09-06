@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static · 主页</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='65' font-size='60' fill='%23ffffff' text-anchor='middle' font-family='cursive'>i</text></svg>">
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const params = new URLSearchParams(window.location.search);
+            const id = (params.get('id') || '').toString().trim().replace(/^@/, '');
+
+            if (!/^[a-zA-Z0-9]+$/.test(id)) {
+                window.location.href = 'static.html';
+                return;
+            }
+
+            const avatarEl = document.getElementById('user-avatar');
+            const nameEl = document.getElementById('user-name');
+            const idEl = document.getElementById('user-id');
+            const regText = document.getElementById('user-registered-text');
+
+            idEl.textContent = '@' + id;
+
+            function formatRegisteredAt(ts) {
+                if (!ts) return null;
+                const d = new Date(ts);
+                if (isNaN(d.getTime())) return null;
+                return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+            }
+
+            try {
+                const res = await fetch('/api/profile?id=' + encodeURIComponent(id));
+                const data = await res.json();
+                if (!data.ok) {
+                    nameEl.textContent = '用户不存在';
+                    regText.textContent = '注册日期：未知';
+                    return;
+                }
+                const name = data.name || ('@' + id);
+                nameEl.textContent = name;
+                if (data.avatar) {
+                    avatarEl.textContent = '';
+                    avatarEl.style.backgroundImage = 'url(' + data.avatar + ')';
+                } else {
+                    avatarEl.textContent = name.charAt(0).toUpperCase();
+                }
+                const reg = formatRegisteredAt(data.registeredAt);
+                regText.textContent = reg ? ('注册日期：' + reg) : '注册日期：未知';
+            } catch (e) {
+                nameEl.textContent = '加载失败';
+                regText.textContent = '注册日期：未知';
+            }
+        });
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #000000;
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 16px;
+            left: 20px;
+            font-size: 13px;
+            color: #ffffff;
+            text-decoration: none;
+            letter-spacing: 0.5px;
+            z-index: 1000;
+        }
+
+        .back-link:hover {
+            opacity: 0.7;
+        }
+
+        .banner {
+            height: 180px;
+            background: #0a0a0a;
+            border-bottom: 1px solid #262626;
+        }
+
+        .profile-card {
+            padding: 0 24px 32px;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .user-avatar {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            border: 3px solid #000000;
+            margin-top: -48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+            background: #000000;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .user-name {
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 16px;
+        }
+
+        .user-id {
+            font-size: 13px;
+            color: #666666;
+            margin-top: 4px;
+        }
+
+        .user-registered {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #262626;
+        }
+
+        .date-icon {
+            flex-shrink: 0;
+        }
+
+        .user-registered-text {
+            font-size: 14px;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            .back-link {
+                top: 10px;
+                left: 12px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a class="back-link" href="static.html" onclick="if(history.length>1){history.back();return false;}">&larr; Static</a>
+
+    <div class="banner"></div>
+
+    <div class="profile-card">
+        <div class="user-avatar" id="user-avatar">@</div>
+        <div class="user-name" id="user-name"></div>
+        <div class="user-id" id="user-id"></div>
+        <div class="user-registered">
+            <svg class="date-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" stroke-width="1.5" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16"></rect>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+                <line x1="8" y1="3" x2="8" y2="7"></line>
+                <line x1="16" y1="3" x2="16" y2="7"></line>
+            </svg>
+            <span class="user-registered-text" id="user-registered-text">注册日期：加载中…</span>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static · 对话</title>
@@ -445,7 +447,7 @@
             });
 
             // ---------- Prism 悬浮聊天框（与 static.html 同款，独立历史） ----------
-            const PRISM_SVG = '<svg viewBox="0 0 512 512"><g stroke-linejoin="round" stroke-linecap="round"><path d="M256,256 L89.72,160 L256,64 L422.28,160 Z" fill="#D9DEE4"/><path d="M256,256 L256,448 L89.72,352 L89.72,160 Z" fill="#7A818B"/><path d="M256,256 L422.28,160 L422.28,352 L256,448 Z" fill="#343A42"/><g stroke="#FFFFFF" stroke-width="18" fill="none"><line x1="256" y1="256" x2="89.72" y2="160"/><line x1="256" y1="256" x2="422.28" y2="160"/><line x1="256" y1="256" x2="256" y2="448"/></g><path d="M256,64 L422.28,160 L422.28,352 L256,448 L89.72,352 L89.72,160 Z" fill="none" stroke="#FFFFFF" stroke-width="22"/></g></svg>';
+            const PRISM_SVG = '<svg viewBox="0 0 512 512"><g stroke-linejoin="round" stroke-linecap="round"><path d="M256,256 L89.72,160 L256,64 L422.28,160 Z" fill="#D9DEE4"/><path d="M256,256 L256,448 L89.72,352 L89.72,160 Z" fill="#7A818B"/><path d="M256,256 L422.28,160 L422.28,352 L256,448 Z" fill="#343A42"/><g stroke="var(--fg)" stroke-width="18" fill="none"><line x1="256" y1="256" x2="89.72" y2="160"/><line x1="256" y1="256" x2="422.28" y2="160"/><line x1="256" y1="256" x2="256" y2="448"/></g><path d="M256,64 L422.28,160 L422.28,352 L256,448 L89.72,352 L89.72,160 Z" fill="none" stroke="var(--fg)" stroke-width="22"/></g></svg>';
 
             const prismPanel = document.getElementById('prism-panel');
             const prismOverlay = document.getElementById('prism-overlay');
@@ -590,7 +592,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            background: #000000;
+            background: var(--bg);
             font-family: Arial, sans-serif;
         }
 
@@ -599,12 +601,12 @@
             align-items: center;
             gap: 12px;
             padding: 12px 16px;
-            border-bottom: 1px solid #262626;
+            border-bottom: 1px solid var(--border-strong);
             flex-shrink: 0;
         }
 
         .back-link {
-            color: #ffffff;
+            color: var(--fg);
             text-decoration: none;
             font-size: 20px;
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
@@ -627,13 +629,13 @@
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 15px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--fg);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             flex-shrink: 0;
             background-size: cover;
@@ -647,13 +649,13 @@
 
         .peer-name {
             font-size: 15px;
-            color: #ffffff;
+            color: var(--fg);
             font-weight: 700;
         }
 
         .peer-id {
             font-size: 11px;
-            color: #666666;
+            color: var(--text-dim);
         }
 
         .messages {
@@ -670,7 +672,7 @@
             align-items: flex-start;
             width: 100%;
             padding: 12px 0;
-            border-bottom: 1px solid #ffffff;
+            border-bottom: 1px solid var(--fg);
         }
 
         /* 连续消息：无白线，头像下垂灰竖线连到下一条（X 式会话线） */
@@ -690,7 +692,7 @@
             top: 44px; /* 头像（32px）底部再往下一点 */
             bottom: -8px; /* 延伸进下一条消息的 padding-top，衔接下一个头像 */
             width: 1px;
-            background: #404040;
+            background: var(--border-soft);
         }
 
         .msg-row.continued.theirs::after {
@@ -723,13 +725,13 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 13px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--fg);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             background-size: cover;
             background-position: center;
@@ -742,7 +744,7 @@
             line-height: 1.5;
             word-break: break-word;
             white-space: pre-wrap;
-            color: #ffffff;
+            color: var(--fg);
         }
 
         .msg-text.undecryptable {
@@ -752,15 +754,15 @@
 
         .msg-time {
             font-size: 10px;
-            color: #888888;
+            color: var(--text-mid);
             margin-top: 4px;
         }
 
         /* 引用行：正文上方灰色小字 */
         .msg-quote {
             font-size: 12px;
-            color: #888888;
-            border-left: 2px solid #404040;
+            color: var(--text-mid);
+            border-left: 2px solid var(--border-soft);
             padding-left: 8px;
             margin-bottom: 4px;
             word-break: break-word;
@@ -772,7 +774,7 @@
             top: 10px;
             background: none;
             border: none;
-            color: #888888;
+            color: var(--text-mid);
             font-size: 16px;
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             cursor: pointer;
@@ -799,7 +801,7 @@
             }
 
             .msg-more:hover {
-                color: #ffffff;
+                color: var(--fg);
             }
         }
 
@@ -807,8 +809,8 @@
         .msg-menu {
             position: fixed;
             width: 96px;
-            background: #000000;
-            border: 1px solid #ffffff;
+            background: var(--bg);
+            border: 1px solid var(--fg);
             z-index: 4000;
             display: none;
         }
@@ -822,8 +824,8 @@
             width: 100%;
             background: none;
             border: none;
-            border-bottom: 1px solid #404040;
-            color: #ffffff;
+            border-bottom: 1px solid var(--border-soft);
+            color: var(--fg);
             font-size: 13px;
             font-family: inherit;
             padding: 10px 0;
@@ -836,8 +838,8 @@
         }
 
         .msg-menu button:hover {
-            background: #ffffff;
-            color: #000000;
+            background: var(--fg);
+            color: var(--bg);
         }
 
         /* 引用条（输入框上方） */
@@ -846,14 +848,14 @@
             align-items: center;
             gap: 10px;
             margin: 8px 16px 0;
-            border-left: 2px solid #ffffff;
+            border-left: 2px solid var(--fg);
             padding-left: 10px;
         }
 
         .quote-text {
             flex: 1;
             font-size: 12px;
-            color: #888888;
+            color: var(--text-mid);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -862,7 +864,7 @@
         .quote-cancel {
             background: none;
             border: none;
-            color: #888888;
+            color: var(--text-mid);
             font-size: 16px;
             cursor: pointer;
             padding: 0 4px;
@@ -870,14 +872,14 @@
         }
 
         .quote-cancel:hover {
-            color: #ffffff;
+            color: var(--fg);
         }
 
         .chat-input-bar {
             display: flex;
             align-items: center;
             margin: 10px 16px;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             border-radius: 19px;
             padding: 4px 4px 4px 14px;
             flex-shrink: 0;
@@ -885,7 +887,7 @@
         }
 
         .chat-input-bar:focus-within {
-            border-color: #ffffff;
+            border-color: var(--fg);
         }
 
         .msg-input {
@@ -893,7 +895,7 @@
             border: none;
             background: transparent;
             font-size: 14px;
-            color: #ffffff;
+            color: var(--fg);
             outline: none;
             resize: none;
             padding: 7px 0;
@@ -907,9 +909,9 @@
         .send-btn {
             width: 28px;
             height: 28px;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             border-radius: 50%;
-            background: #000000;
+            background: var(--bg);
             cursor: pointer;
             flex-shrink: 0;
             margin-left: 10px;
@@ -923,7 +925,7 @@
             width: 11px;
             height: 15px;
             display: block;
-            stroke: #ffffff;
+            stroke: var(--fg);
             stroke-width: 2.5;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -932,11 +934,11 @@
         }
 
         .send-btn:hover:not(:disabled) {
-            background: #ffffff;
+            background: var(--fg);
         }
 
         .send-btn:hover:not(:disabled) svg {
-            stroke: #000000;
+            stroke: var(--bg);
         }
 
         .send-btn:disabled {
@@ -956,7 +958,7 @@
         .prism-entry {
             position: fixed;
             top: 14px;
-            right: 16px;
+            right: 60px;
             z-index: 1000;
             cursor: pointer;
             transition: opacity 0.3s ease;
@@ -997,8 +999,8 @@
             max-height: min(1200px, calc(100vh - 96px));
             display: flex;
             flex-direction: column;
-            background: #000000;
-            border: 1px solid #404040;
+            background: var(--bg);
+            border: 1px solid var(--border-soft);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease, transform 0.3s ease;
@@ -1016,7 +1018,7 @@
             align-items: center;
             gap: 12px;
             padding: 12px 16px;
-            border-bottom: 1px solid #262626;
+            border-bottom: 1px solid var(--border-strong);
             flex-shrink: 0;
         }
 
@@ -1039,13 +1041,13 @@
 
         .prism-head-name {
             font-size: 15px;
-            color: #ffffff;
+            color: var(--fg);
             font-weight: 700;
         }
 
         .prism-head-id {
             font-size: 11px;
-            color: #666666;
+            color: var(--text-dim);
         }
 
         /* 模型名标签（锁=当前唯一模型，以后多模型换箭头） */
@@ -1055,7 +1057,7 @@
             gap: 5px;
             margin-left: 16px;
             font-size: 11px;
-            color: #666666;
+            color: var(--text-dim);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             flex-shrink: 0;
         }
@@ -1063,7 +1065,7 @@
         .model-tag svg {
             width: 11px;
             height: 11px;
-            stroke: #666666;
+            stroke: var(--text-dim);
             stroke-width: 2;
             fill: none;
             stroke-linecap: round;
@@ -1074,7 +1076,7 @@
             margin-left: auto;
             background: none;
             border: none;
-            color: #888888;
+            color: var(--text-mid);
             font-size: 20px;
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             cursor: pointer;
@@ -1083,7 +1085,7 @@
         }
 
         .prism-close:hover {
-            color: #ffffff;
+            color: var(--fg);
         }
 
         .prism-log {
@@ -1100,7 +1102,7 @@
             align-items: flex-start;
             width: 100%;
             padding: 12px 0;
-            border-bottom: 1px solid #ffffff;
+            border-bottom: 1px solid var(--fg);
         }
 
         .pmsg-row.continued {
@@ -1119,7 +1121,7 @@
             top: 44px;
             bottom: -8px;
             width: 1px;
-            background: #404040;
+            background: var(--border-soft);
         }
 
         .pmsg-row.continued.theirs::after {
@@ -1152,13 +1154,13 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 13px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--fg);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             background-size: cover;
             background-position: center;
@@ -1182,18 +1184,18 @@
             line-height: 1.5;
             word-break: break-word;
             white-space: pre-wrap;
-            color: #ffffff;
+            color: var(--fg);
         }
 
         .pmsg-time {
             font-size: 10px;
-            color: #888888;
+            color: var(--text-mid);
             margin-top: 4px;
         }
 
         .prism-status {
             font-size: 11px;
-            color: #888888;
+            color: var(--text-mid);
             text-align: center;
             min-height: 15px;
             flex-shrink: 0;
@@ -1203,7 +1205,7 @@
             display: flex;
             align-items: center;
             margin: 8px 12px 12px;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             border-radius: 19px;
             padding: 4px 4px 4px 14px;
             flex-shrink: 0;
@@ -1211,7 +1213,7 @@
         }
 
         .prism-input-bar:focus-within {
-            border-color: #ffffff;
+            border-color: var(--fg);
         }
 
         .prism-input {
@@ -1219,7 +1221,7 @@
             border: none;
             background: transparent;
             font-size: 14px;
-            color: #ffffff;
+            color: var(--fg);
             outline: none;
             padding: 7px 0;
             min-width: 0;
@@ -1228,9 +1230,9 @@
         .prism-send {
             width: 28px;
             height: 28px;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             border-radius: 50%;
-            background: #000000;
+            background: var(--bg);
             cursor: pointer;
             flex-shrink: 0;
             margin-left: 10px;
@@ -1244,7 +1246,7 @@
             width: 11px;
             height: 15px;
             display: block;
-            stroke: #ffffff;
+            stroke: var(--fg);
             stroke-width: 2.5;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -1253,11 +1255,11 @@
         }
 
         .prism-send:hover:not(:disabled) {
-            background: #ffffff;
+            background: var(--fg);
         }
 
         .prism-send:hover:not(:disabled) svg {
-            stroke: #000000;
+            stroke: var(--bg);
         }
 
         .prism-send:disabled {
@@ -1272,7 +1274,7 @@
 
             .prism-entry {
                 top: 10px;
-                right: 12px;
+                right: 52px;
             }
 
             .prism-entry svg {
@@ -1348,12 +1350,12 @@
                 <path d="M 256.00,256.00 L 89.72,160.00 L 256.00,64.00 L 422.28,160.00 Z" fill="#D9DEE4" stroke="none"/>
                 <path d="M 256.00,256.00 L 256.00,448.00 L 89.72,352.00 L 89.72,160.00 Z" fill="#7A818B" stroke="none"/>
                 <path d="M 256.00,256.00 L 422.28,160.00 L 422.28,352.00 L 256.00,448.00 Z" fill="#343A42" stroke="none"/>
-                <g stroke="#FFFFFF" stroke-width="18.0" fill="none">
+                <g stroke="var(--fg)" stroke-width="18.0" fill="none">
                     <line x1="256.00" y1="256.00" x2="89.72" y2="160.00"/>
                     <line x1="256.00" y1="256.00" x2="422.28" y2="160.00"/>
                     <line x1="256.00" y1="256.00" x2="256.00" y2="448.00"/>
                 </g>
-                <path d="M 256.00,64.00 L 422.28,160.00 L 422.28,352.00 L 256.00,448.00 L 89.72,352.00 L 89.72,160.00 Z" fill="none" stroke="#FFFFFF" stroke-width="22.0"/>
+                <path d="M 256.00,64.00 L 422.28,160.00 L 422.28,352.00 L 256.00,448.00 L 89.72,352.00 L 89.72,160.00 Z" fill="none" stroke="var(--fg)" stroke-width="22.0"/>
             </g>
         </svg>
     </div>

@@ -17,7 +17,7 @@
     // 实心填充在小尺寸下天然清晰，不像之前的断环+闪电线条要纠结线宽和断口
     var BADGE_SVG =
         '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="已认证">' +
-        '<path d="M50 8 L58 42 L92 50 L58 58 L50 92 L42 58 L8 50 L42 42 Z" fill="#ffffff"/>' +
+        '<path d="M50 8 L58 42 L92 50 L58 58 L50 92 L42 58 L8 50 L42 42 Z" fill="var(--fg)"/>' +
         '</svg>';
 
     // 样式只注入一次：尺寸跟随名字字号（em），无需每页写 CSS

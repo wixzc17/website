@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static · 主页</title>
@@ -319,9 +321,9 @@
 
         body {
             min-height: 100vh;
-            background: #000000;
+            background: var(--bg);
             font-family: Arial, sans-serif;
-            color: #ffffff;
+            color: var(--fg);
         }
 
         .back-link {
@@ -329,7 +331,7 @@
             top: 16px;
             left: 20px;
             font-size: 13px;
-            color: #ffffff;
+            color: var(--fg);
             text-decoration: none;
             letter-spacing: 0.5px;
             z-index: 1000;
@@ -341,8 +343,8 @@
 
         .banner {
             height: 180px;
-            background: #0a0a0a;
-            border-bottom: 1px solid #262626;
+            background: var(--bg-soft);
+            border-bottom: 1px solid var(--border-strong);
             max-width: 50%;
             margin: 0 auto;
             background-size: cover;
@@ -364,16 +366,16 @@
             width: 96px;
             height: 96px;
             border-radius: 50%;
-            border: 3px solid #000000;
+            border: 3px solid var(--bg);
             margin-top: -48px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 36px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--fg);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
-            background: #000000;
+            background: var(--bg);
             background-size: cover;
             background-position: center;
         }
@@ -410,8 +412,8 @@
             margin-left: 12px;
             vertical-align: middle;
             padding: 4px 10px;
-            border: 1px solid #ffffff;
-            color: #ffffff;
+            border: 1px solid var(--fg);
+            color: var(--fg);
             font-size: 12px;
             letter-spacing: 1px;
             text-decoration: none;
@@ -419,12 +421,12 @@
         }
 
         .verify-cta:hover {
-            background: #ffffff;
-            color: #000000;
+            background: var(--fg);
+            color: var(--bg);
         }
 
         .verify-cta:hover .verify-cta-icon svg path {
-            fill: #000000;
+            fill: var(--bg);
         }
 
         .verify-cta-icon {
@@ -445,7 +447,7 @@
 
         .user-id {
             font-size: 13px;
-            color: #666666;
+            color: var(--text-dim);
             margin-top: 4px;
             /* block + fit-content：既换行到用户名下方，又只让文字本身可点
                （inline-block 会跟着认证框排在同一行） */
@@ -463,7 +465,7 @@
             gap: 10px;
             margin-top: 24px;
             padding-top: 16px;
-            border-top: 1px solid #262626;
+            border-top: 1px solid var(--border-strong);
         }
 
         .date-icon {
@@ -472,7 +474,7 @@
 
         .user-registered-text {
             font-size: 14px;
-            color: #ffffff;
+            color: var(--fg);
             letter-spacing: 0.5px;
         }
 
@@ -498,8 +500,8 @@
             left: 50%;
             transform: translate(-50%, -46%);
             width: min(420px, calc(100vw - 32px));
-            background: #000000;
-            border: 1px solid #404040;
+            background: var(--bg);
+            border: 1px solid var(--border-soft);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease, transform 0.3s ease;
@@ -519,7 +521,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 12px 16px;
-            border-bottom: 1px solid #262626;
+            border-bottom: 1px solid var(--border-strong);
         }
 
         .modal-title {
@@ -530,7 +532,7 @@
         .modal-close {
             background: none;
             border: none;
-            color: #888888;
+            color: var(--text-mid);
             font-size: 20px;
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             cursor: pointer;
@@ -538,7 +540,7 @@
         }
 
         .modal-close:hover {
-            color: #ffffff;
+            color: var(--fg);
         }
 
         .modal-body {
@@ -553,9 +555,9 @@
         }
 
         .modal-btn {
-            border: 1px solid #ffffff;
-            background: #000000;
-            color: #ffffff;
+            border: 1px solid var(--fg);
+            background: var(--bg);
+            color: var(--fg);
             font-size: 13px;
             padding: 8px 18px;
             cursor: pointer;
@@ -563,8 +565,8 @@
         }
 
         .modal-btn:hover:not(:disabled) {
-            background: #ffffff;
-            color: #000000;
+            background: var(--fg);
+            color: var(--bg);
         }
 
         .modal-btn:disabled {
@@ -575,9 +577,9 @@
         .name-edit-input {
             width: 100%;
             border: none;
-            border-bottom: 1px solid #ffffff;
+            border-bottom: 1px solid var(--fg);
             background: transparent;
-            color: #ffffff;
+            color: var(--fg);
             font-size: 15px;
             padding: 10px 2px;
             outline: none;
@@ -586,12 +588,12 @@
         .id-tip {
             font-size: 14px;
             line-height: 1.6;
-            color: #dddddd;
+            color: var(--text-body-bright);
         }
 
         .crop-ratio-hint {
             font-size: 13px;
-            color: #666666;
+            color: var(--text-dim);
             margin-bottom: 12px;
         }
 
@@ -599,7 +601,7 @@
             position: relative;
             width: 100%;
             overflow: hidden;
-            background: #000000;
+            background: var(--bg);
             touch-action: none;
             cursor: move;
         }
@@ -620,7 +622,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #666666;
+            color: var(--text-dim);
             font-size: 13px;
         }
 
@@ -656,7 +658,7 @@
         </a>
         <div class="user-id" id="user-id"></div>
         <div class="user-registered">
-            <svg class="date-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" stroke-width="1.5" aria-hidden="true">
+            <svg class="date-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--fg)" stroke-width="1.5" aria-hidden="true">
                 <rect x="3" y="5" width="18" height="16"></rect>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
                 <line x1="8" y1="3" x2="8" y2="7"></line>

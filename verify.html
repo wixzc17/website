@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static · 认证</title>
@@ -17,7 +19,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            background: #000000;
+            background: var(--bg);
             font-family: Arial, sans-serif;
         }
 
@@ -31,19 +33,19 @@
 
         .verify-header {
             margin-bottom: 16px;
-            border-bottom: 1px solid #333333;
+            border-bottom: 1px solid var(--border);
             padding-bottom: 18px;
         }
 
         .verify-title {
             font-size: 20px;
-            color: #ffffff;
+            color: var(--fg);
             letter-spacing: 2px;
             line-height: 1;
         }
 
         .verify-desc {
-            color: #999999;
+            color: var(--text-sub);
             font-size: 14px;
             line-height: 1.8;
             margin-bottom: 32px;
@@ -68,7 +70,7 @@
         }
 
         .tier {
-            border: 1px solid #ffffff;
+            border: 1px solid var(--fg);
             padding: 22px 20px;
         }
 
@@ -76,7 +78,7 @@
             font-size: 22px;
             font-weight: 700;
             font-style: italic;
-            color: #ffffff;
+            color: var(--fg);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
             letter-spacing: 1px;
         }
@@ -84,7 +86,7 @@
         .tier-price {
             margin-top: 10px;
             font-size: 18px;
-            color: #ffffff;
+            color: var(--fg);
             font-style: italic;
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
         }
@@ -99,9 +101,9 @@
         .tier-btn {
             flex: 1 1 140px;
             padding: 8px 14px;
-            border: 1px solid #ffffff;
+            border: 1px solid var(--fg);
             background: transparent;
-            color: #ffffff;
+            color: var(--fg);
             font-size: 13px;
             letter-spacing: 1px;
             font-family: inherit;
@@ -110,8 +112,8 @@
         }
 
         .tier-btn:hover {
-            background: #ffffff;
-            color: #000000;
+            background: var(--fg);
+            color: var(--bg);
         }
 
         /* 权限列表：每条前面一条灰色短横线（与 changelog 一致） */
@@ -119,14 +121,14 @@
             list-style: none;
             margin-top: 22px;
             padding-top: 18px;
-            border-top: 1px solid #333333;
+            border-top: 1px solid var(--border);
         }
 
         .tier-list li {
             padding-left: 16px;
             position: relative;
             margin-bottom: 8px;
-            color: #cccccc;
+            color: var(--text-body);
             font-size: 14px;
             line-height: 1.6;
         }
@@ -138,14 +140,14 @@
             top: 11px;
             width: 6px;
             height: 1px;
-            background: #666666;
+            background: var(--text-dim);
         }
 
         .tier-soon {
             margin-top: 22px;
             padding-top: 18px;
-            border-top: 1px solid #333333;
-            color: #666666;
+            border-top: 1px solid var(--border);
+            color: var(--text-dim);
             font-size: 13px;
             line-height: 1.8;
         }
@@ -153,7 +155,7 @@
         .verify-note {
             margin-top: 28px;
             min-height: 20px;
-            color: #666666;
+            color: var(--text-dim);
             font-size: 13px;
             letter-spacing: 0.5px;
         }
@@ -163,7 +165,7 @@
             top: 16px;
             left: 20px;
             font-size: 13px;
-            color: #ffffff;
+            color: var(--fg);
             text-decoration: none;
             letter-spacing: 0.5px;
             transition: opacity 0.3s ease;
@@ -181,7 +183,7 @@
 
         .copyright {
             font-size: 14px;
-            color: #888888;
+            color: var(--text-mid);
             font-style: italic;
             font-weight: bold;
             line-height: 1.5;

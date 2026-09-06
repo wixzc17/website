@@ -1,0 +1,67 @@
+/* Static 主题变量：夜间（默认）与日间两套配色
+   由 theme.js 在 <html> 上设置 data-theme="dark"|"light" 来切换 */
+:root {
+    --bg: #000000;
+    --bg-soft: #0a0a0a;
+    --bg-hover: #1a1a1a;
+    --fg: #ffffff;
+    --border-strong: #262626;
+    --border: #333333;
+    --border-soft: #404040;
+    --text-faint: #555555;
+    --text-dim: #666666;
+    --text-mid: #888888;
+    --text-sub: #999999;
+    --text-body: #cccccc;
+    --text-body-bright: #dddddd;
+}
+
+[data-theme="light"] {
+    --bg: #ffffff;
+    --bg-soft: #f5f5f5;
+    --bg-hover: #ececec;
+    --fg: #000000;
+    --border-strong: #e8e8e8;
+    --border: #dcdcdc;
+    --border-soft: #cfcfcf;
+    --text-faint: #b0b0b0;
+    --text-dim: #999999;
+    --text-mid: #7a7a7a;
+    --text-sub: #666666;
+    --text-body: #333333;
+    --text-body-bright: #222222;
+}
+
+/* 主题切换按钮（theme.js 自动注入到 body） */
+.theme-toggle {
+    position: fixed;
+    top: 14px;
+    right: 18px;
+    z-index: 2001;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.theme-toggle svg {
+    width: 22px;
+    height: 22px;
+    stroke: var(--fg);
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.theme-toggle:hover { opacity: 0.7; }
+
+@media (max-width: 768px) {
+    .theme-toggle { top: 9px; right: 10px; }
+    .theme-toggle svg { width: 20px; height: 20px; }
+}

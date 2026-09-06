@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static 登录</title>
@@ -232,7 +234,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            background: #000000;
+            background: var(--bg);
             font-family: Arial, sans-serif;
         }
 
@@ -250,7 +252,7 @@
             font-weight: 700;
             font-style: italic;
             margin-bottom: 40px;
-            color: #ffffff;
+            color: var(--fg);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
             letter-spacing: 1px;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
@@ -273,7 +275,7 @@
         .form-field label {
             display: block;
             font-size: 12px;
-            color: #888888;
+            color: var(--text-mid);
             letter-spacing: 1px;
             margin-bottom: 6px;
         }
@@ -281,31 +283,31 @@
         .form-field input {
             width: 100%;
             border: none;
-            border-bottom: 1px solid #ffffff;
+            border-bottom: 1px solid var(--fg);
             border-radius: 0;
             padding: 10px 2px;
             font-size: 15px;
-            background: #000000;
-            color: #ffffff;
+            background: var(--bg);
+            color: var(--fg);
             outline: none;
         }
 
         .form-field input:focus {
-            border-color: #ffffff;
+            border-color: var(--fg);
         }
 
         .form-field input::placeholder {
-            color: #444444;
+            color: var(--text-faint);
         }
 
         .login-btn {
             width: 100%;
-            border: 1px solid #ffffff;
+            border: 1px solid var(--fg);
             border-radius: 0;
             padding: 12px;
             font-size: 15px;
-            background: #000000;
-            color: #ffffff;
+            background: var(--bg);
+            color: var(--fg);
             cursor: pointer;
             letter-spacing: 2px;
             transition: all 0.3s ease;
@@ -313,8 +315,8 @@
         }
 
         .login-btn:hover:not(:disabled) {
-            background: #ffffff;
-            color: #000000;
+            background: var(--fg);
+            color: var(--bg);
         }
 
         .login-btn:disabled {
@@ -335,7 +337,7 @@
             background: none;
             border: none;
             font-size: 12px;
-            color: #666666;
+            color: var(--text-dim);
             cursor: pointer;
             letter-spacing: 1px;
             padding: 0;
@@ -343,7 +345,7 @@
         }
 
         .register-toggle:hover {
-            color: #ffffff;
+            color: var(--fg);
         }
 
         .invite-hint {
@@ -351,7 +353,7 @@
             max-width: 360px;
             margin-top: 18px;
             font-size: 12px;
-            color: #666666;
+            color: var(--text-dim);
             line-height: 1.8;
             text-align: center;
             letter-spacing: 0.5px;
@@ -365,7 +367,7 @@
 
         .tool-toggle {
             font-size: 12px;
-            color: #666666;
+            color: var(--text-dim);
             cursor: pointer;
             letter-spacing: 1px;
             background: none;
@@ -374,20 +376,20 @@
         }
 
         .tool-toggle:hover {
-            color: #ffffff;
+            color: var(--fg);
         }
 
         .tool-panel {
             display: none;
             margin-top: 14px;
             padding: 16px;
-            border: 1px solid #262626;
+            border: 1px solid var(--border-strong);
             border-radius: 8px;
         }
 
         .tool-panel p {
             font-size: 12px;
-            color: #888888;
+            color: var(--text-mid);
             line-height: 1.6;
             margin-bottom: 12px;
         }
@@ -399,35 +401,35 @@
 
         .tool-row input {
             flex: 1;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             border-radius: 8px;
             padding: 10px 12px;
             font-size: 14px;
-            background: #000000;
-            color: #ffffff;
+            background: var(--bg);
+            color: var(--fg);
             outline: none;
         }
 
         .tool-row button {
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             border-radius: 8px;
             padding: 10px 16px;
             font-size: 13px;
-            background: #000000;
-            color: #ffffff;
+            background: var(--bg);
+            color: var(--fg);
             cursor: pointer;
             white-space: nowrap;
         }
 
         .tool-row button:hover {
-            background: #ffffff;
-            color: #000000;
+            background: var(--fg);
+            color: var(--bg);
         }
 
         .tool-result {
             margin-top: 12px;
             font-size: 11px;
-            color: #888888;
+            color: var(--text-mid);
             word-break: break-all;
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             line-height: 1.5;
@@ -438,7 +440,7 @@
             top: 16px;
             left: 20px;
             font-size: 13px;
-            color: #ffffff;
+            color: var(--fg);
             text-decoration: none;
             letter-spacing: 0.5px;
             transition: opacity 0.3s ease;
@@ -456,7 +458,7 @@
 
         .copyright {
             font-size: 14px;
-            color: #888888;
+            color: var(--text-mid);
             font-style: italic;
             font-weight: bold;
             line-height: 1.5;

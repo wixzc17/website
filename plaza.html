@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static · 广场</title>
@@ -378,7 +380,7 @@
         body {
             display: flex;
             flex-direction: column;
-            background: #000000;
+            background: var(--bg);
             font-family: Arial, sans-serif;
         }
 
@@ -402,7 +404,7 @@
         }
 
         .feed-empty {
-            color: #666666;
+            color: var(--text-dim);
             font-size: 14px;
             text-align: center;
             padding: 40px 0;
@@ -416,7 +418,7 @@
         }
 
         .composer-box {
-            border-bottom: 1px solid #ffffff;
+            border-bottom: 1px solid var(--fg);
             padding-bottom: 10px;
         }
 
@@ -426,13 +428,13 @@
             border: none;
             outline: none;
             resize: none;
-            color: #ffffff;
+            color: var(--fg);
             font-size: 15px;
             font-family: inherit;
             line-height: 1.5;
         }
 
-        .composer-input::placeholder { color: #555555; }
+        .composer-input::placeholder { color: var(--text-faint); }
 
         .composer-footer {
             display: flex;
@@ -441,12 +443,12 @@
             margin-top: 8px;
         }
 
-        .composer-count { font-size: 12px; color: #555555; }
+        .composer-count { font-size: 12px; color: var(--text-faint); }
 
         .composer-send {
             width: 34px;
             height: 34px;
-            border: 1px solid #ffffff;
+            border: 1px solid var(--fg);
             background: transparent;
             display: flex;
             align-items: center;
@@ -455,15 +457,15 @@
             transition: background 0.2s ease;
         }
 
-        .composer-send svg { width: 16px; height: 16px; stroke: #ffffff; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-        .composer-send:hover { background: #ffffff; }
-        .composer-send:hover svg { stroke: #000000; }
+        .composer-send svg { width: 16px; height: 16px; stroke: var(--fg); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .composer-send:hover { background: var(--fg); }
+        .composer-send:hover svg { stroke: var(--bg); }
         .composer-send:disabled { opacity: 0.4; pointer-events: none; }
 
         /* ---------- 推文卡片 ---------- */
         .post {
             padding: 16px 0;
-            border-bottom: 1px solid #262626;
+            border-bottom: 1px solid var(--border-strong);
         }
 
         .post-head { display: flex; align-items: flex-start; gap: 10px; }
@@ -472,13 +474,13 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 16px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--fg);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             flex-shrink: 0;
             background-size: cover;
@@ -489,22 +491,22 @@
 
         .post-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-        .post-name { font-size: 14px; font-weight: 700; color: #ffffff; }
+        .post-name { font-size: 14px; font-weight: 700; color: var(--fg); }
 
-        .post-id { font-size: 12px; color: #666666; margin-top: 2px; }
+        .post-id { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
         .post-del {
             background: none;
             border: none;
-            color: #555555;
+            color: var(--text-faint);
             font-size: 12px;
             cursor: pointer;
             padding: 2px 6px;
         }
-        .post-del:hover { color: #ffffff; }
+        .post-del:hover { color: var(--fg); }
 
         .post-text {
-            color: #dddddd;
+            color: var(--text-body-bright);
             font-size: 15px;
             line-height: 1.6;
             margin: 10px 0 4px;
@@ -521,31 +523,31 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            color: #888888;
+            color: var(--text-mid);
             font-size: 13px;
             padding: 4px 0;
         }
 
-        .act svg { width: 18px; height: 18px; stroke: #888888; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.2s ease; }
-        .act:hover svg { stroke: #ffffff; }
-        .act.liked svg { stroke: #ffffff; fill: #ffffff; }
-        .act.liked { color: #ffffff; }
+        .act svg { width: 18px; height: 18px; stroke: var(--text-mid); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.2s ease; }
+        .act:hover svg { stroke: var(--fg); }
+        .act.liked svg { stroke: var(--fg); fill: var(--fg); }
+        .act.liked { color: var(--fg); }
         .act-num { color: inherit; }
 
         /* ---------- 评论区 ---------- */
         .post-comments {
             margin-top: 10px;
             padding: 10px 0 0 10px;
-            border-left: 1px solid #404040;
+            border-left: 1px solid var(--border-soft);
         }
 
-        .cmt-loading { color: #555555; font-size: 13px; padding: 4px 0; }
+        .cmt-loading { color: var(--text-faint); font-size: 13px; padding: 4px 0; }
 
         .cmt-row { padding: 5px 0; font-size: 13px; line-height: 1.5; }
 
-        .cmt-author { color: #ffffff; font-weight: 700; margin-right: 8px; }
+        .cmt-author { color: var(--fg); font-weight: 700; margin-right: 8px; }
 
-        .cmt-text { color: #cccccc; word-break: break-word; }
+        .cmt-text { color: var(--text-body); word-break: break-word; }
 
         .cmt-input-row { display: flex; gap: 8px; margin-top: 8px; }
 
@@ -553,25 +555,25 @@
             flex: 1;
             background: transparent;
             border: none;
-            border-bottom: 1px solid #404040;
+            border-bottom: 1px solid var(--border-soft);
             outline: none;
-            color: #ffffff;
+            color: var(--fg);
             font-size: 13px;
             font-family: inherit;
             padding: 4px 0;
         }
-        .cmt-input:focus { border-bottom-color: #ffffff; }
+        .cmt-input:focus { border-bottom-color: var(--fg); }
 
         .cmt-send {
             background: none;
-            border: 1px solid #ffffff;
-            color: #ffffff;
+            border: 1px solid var(--fg);
+            color: var(--fg);
             font-size: 12px;
             cursor: pointer;
             padding: 4px 10px;
             transition: background 0.2s ease, color 0.2s ease;
         }
-        .cmt-send:hover { background: #ffffff; color: #000000; }
+        .cmt-send:hover { background: var(--fg); color: var(--bg); }
         .cmt-send:disabled { opacity: 0.4; pointer-events: none; }
 
         /* ---------- 原有：返回 / 身份 / 侧边栏 / 底栏 ---------- */
@@ -580,7 +582,7 @@
             top: 16px;
             left: 20px;
             font-size: 13px;
-            color: #ffffff;
+            color: var(--fg);
             text-decoration: none;
             letter-spacing: 0.5px;
             transition: opacity 0.3s ease;
@@ -602,13 +604,13 @@
             width: 44px;
             height: 44px;
             border-radius: 50%;
-            border: 1px solid #404040;
+            border: 1px solid var(--border-soft);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--fg);
             font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
             cursor: pointer;
             flex-shrink: 0;
@@ -616,11 +618,11 @@
             background-position: center;
             transition: border-color 0.3s ease;
         }
-        .me-avatar:hover { border-color: #ffffff; }
+        .me-avatar:hover { border-color: var(--fg); }
 
         .me-text { display: flex; flex-direction: column; gap: 2px; }
-        .me-name { font-size: 15px; color: #ffffff; font-weight: 700; }
-        .me-id { font-size: 12px; color: #888888; }
+        .me-name { font-size: 15px; color: var(--fg); font-weight: 700; }
+        .me-id { font-size: 12px; color: var(--text-mid); }
 
         .sidebar-overlay {
             position: fixed;
@@ -639,8 +641,8 @@
             left: 0;
             bottom: 0;
             width: 240px;
-            background: #0a0a0a;
-            border-right: 1px solid #262626;
+            background: var(--bg-soft);
+            border-right: 1px solid var(--border-strong);
             transform: translateX(-100%);
             transition: transform 0.3s ease;
             z-index: 2000;
@@ -654,24 +656,24 @@
             display: block;
             padding: 12px 20px;
             font-size: 14px;
-            color: #ffffff;
+            color: var(--fg);
             text-decoration: none;
             transition: background 0.2s ease;
         }
-        .sidebar-item:hover { background: #1a1a1a; }
+        .sidebar-item:hover { background: var(--bg-hover); }
 
         .sidebar-close {
             position: absolute;
             top: 12px;
             right: 12px;
             font-size: 18px;
-            color: #888888;
+            color: var(--text-mid);
             background: none;
             border: none;
             cursor: pointer;
             padding: 4px 8px;
         }
-        .sidebar-close:hover { color: #ffffff; }
+        .sidebar-close:hover { color: var(--fg); }
 
         .sidebar-logout {
             margin-top: auto;
@@ -702,15 +704,15 @@
         .bar-tab svg {
             width: 26px;
             height: 26px;
-            stroke: #ffffff;
+            stroke: var(--fg);
             stroke-width: 2.5;
             stroke-linecap: round;
             stroke-linejoin: round;
             fill: none;
             transition: stroke 0.3s ease;
         }
-        .bar-tab:hover { background: #ffffff; }
-        .bar-tab:hover svg { stroke: #000000; }
+        .bar-tab:hover { background: var(--fg); }
+        .bar-tab:hover svg { stroke: var(--bg); }
 
         .bar-tab.active::after {
             content: '';
@@ -719,7 +721,7 @@
             left: 0;
             right: 0;
             height: 2px;
-            background: #ffffff;
+            background: var(--fg);
         }
 
         @media (max-width: 768px) {

@@ -1,14 +1,9 @@
 /* Static 主题变量：夜间（默认）与日间两套配色
    由 theme.js 在 <html> 上设置 data-theme="dark"|"light" 来切换 */
 
-/* 全局盒模型 + 安卓安全区适配 */
+/* 全局盒模型（确保 padding 不撑大 height） */
 html { box-sizing: border-box; }
 *, *::before, *::after { box-sizing: inherit; }
-
-body {
-    /* 底部手势导航栏避让（安卓手势线/iPhone Home Indicator） */
-    padding-bottom: env(safe-area-inset-bottom);
-}
 
 :root {
     --bg: #000000;

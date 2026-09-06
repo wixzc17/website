@@ -937,7 +937,8 @@
         /* 底部栏：竖线一分为二，左 chat 入口，右留空 */
         .bottom-bar {
             display: flex;
-            height: 72px;
+            min-height: 72px;
+            padding-bottom: env(safe-area-inset-bottom);
             flex-shrink: 0;
             position: relative;
             z-index: 10;
@@ -1597,7 +1598,7 @@
             }
 
             .bottom-bar {
-                height: 60px;
+                min-height: 60px;
             }
 
             .bar-tab svg {

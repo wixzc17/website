@@ -1,6 +1,6 @@
 // Static PWA Service Worker
 // 缓存静态资源，实现"可安装"能力；API 请求一律走网络不缓存
-const CACHE_NAME = 'static-pwa-v1';
+const CACHE_NAME = 'static-pwa-v2';
 const PRECACHE = [
   '/',
   '/index.html',

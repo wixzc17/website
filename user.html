@@ -269,7 +269,7 @@
                 renderCrop();
             }, { passive: false });
 
-            function exportCrop(outW, outH) {
+            function exportCrop(outW, outH, quality) {
                 const srcX = -cropTx / cropScale;
                 const srcY = -cropTy / cropScale;
                 const srcW = cropBoxW / cropScale;
@@ -278,8 +278,25 @@
                 canvas.width = outW;
                 canvas.height = outH;
                 const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(cropImgEl, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
-                return canvas.toDataURL('image/jpeg', 0.85);
+                return canvas.toDataURL('image/jpeg', quality == null ? 0.85 : quality);
+            }
+
+            // 头像清晰度：从 512 高画质起导出；base64 超 API 上限(100KB)则逐级降质/降尺寸
+            const AVATAR_BUDGET = 98000;
+            function exportAvatar() {
+                const combos = [
+                    [512, 0.92], [512, 0.85], [512, 0.78],
+                    [448, 0.82], [384, 0.84], [320, 0.85], [256, 0.85]
+                ];
+                let uri = null;
+                for (let i = 0; i < combos.length; i++) {
+                    uri = exportCrop(combos[i][0], combos[i][0], combos[i][1]);
+                    if (uri.length <= AVATAR_BUDGET) break;
+                }
+                return uri;
             }
 
             cropConfirm.addEventListener('click', async function() {
@@ -287,7 +304,7 @@
                 let field, dataUri;
                 if (cropMode === 'avatar') {
                     field = 'avatar';
-                    dataUri = exportCrop(256, 256);
+                    dataUri = exportAvatar();
                 } else {
                     field = 'banner';
                     dataUri = exportCrop(1200, 900);
